@@ -210,4 +210,22 @@ INSERT OR IGNORE INTO fred_series (series_id, title, units, frequency, category)
 
   -- Housing
   ('HOUST',               'Housing Starts',                                               'Thousands','Monthly',   'Housing'),
-  ('EXHOSLUSM495S',       'Existing Home Sales',                                          'Number',   'Monthly',   'Housing');
+  ('EXHOSLUSM495S',       'Existing Home Sales',                                          'Number',   'Monthly',   'Housing'),
+
+  -- Analysis-only (v1.1) — not shown on MACRO dashboard
+  ('USREC',               'NBER-based Recession Indicator',                               'Binary',   'Monthly',   'Recession'),
+  -- Yield-curve tenors (v1.1) — DGS10 already a MACRO tile; the rest are Analysis-only
+  ('DGS3MO',              '3-Month Treasury Constant Maturity Rate',                      'Percent',  'Daily',     'Rates'),
+  ('DGS2',                '2-Year Treasury Constant Maturity Rate',                       'Percent',  'Daily',     'Rates'),
+  ('DGS5',                '5-Year Treasury Constant Maturity Rate',                       'Percent',  'Daily',     'Rates'),
+  ('DGS30',               '30-Year Treasury Constant Maturity Rate',                      'Percent',  'Daily',     'Rates');
+
+-- v1.1 Analysis-only series. Idempotent on every boot — covers fresh installs
+-- (seeded with DEFAULT 1, then flipped here) and pre-v1.1 DB upgrades.
+UPDATE fred_series SET tile_visible = 0 WHERE series_id IN ('USREC', 'DGS3MO', 'DGS2', 'DGS5', 'DGS30');
+
+-- v1.1 Analysis tool registry — Phase 1 ships Correlations + Yield Curve.
+-- Phase 2/3/4 tools land via additional INSERT OR IGNORE rows; never re-key existing ids.
+INSERT OR IGNORE INTO analysis_tools (id, display_name, scope, display_order, enabled, config_json) VALUES
+  ('correlation_matrix', 'Correlations', 'cross_asset', 1, 1, NULL),
+  ('yield_curve',        'Yield Curve',  'macro',       2, 1, NULL);

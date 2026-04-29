@@ -36,7 +36,8 @@ CREATE TABLE IF NOT EXISTS fred_series (
   units          TEXT,
   frequency      TEXT,
   category       TEXT,
-  last_fetched   TEXT
+  last_fetched   TEXT,
+  tile_visible   INTEGER NOT NULL DEFAULT 1   -- 0 = used by Analysis only (e.g. USREC for recession bars), hidden from MACRO dashboard
 );
 
 CREATE TABLE IF NOT EXISTS fred_observations (
@@ -152,4 +153,17 @@ CREATE INDEX IF NOT EXISTS idx_news_items_category_published
 CREATE TABLE IF NOT EXISTS config (
   key    TEXT PRIMARY KEY,
   value  TEXT
+);
+
+-- v1.1 Analysis tool registry. Mirrors the `indicators` table pattern: each
+-- analysis tool ships as a Rust compute module + React component pair both
+-- referencing the same `id`. The registry controls visibility / order /
+-- default config — never code-loading.
+CREATE TABLE IF NOT EXISTS analysis_tools (
+  id              TEXT PRIMARY KEY,             -- 'correlation_matrix', 'yield_curve', ...
+  display_name    TEXT NOT NULL,                -- 'Correlations', 'Yield Curve'
+  scope           TEXT NOT NULL,                -- 'cross_asset' | 'macro' | 'sentiment'
+  display_order   INTEGER NOT NULL,
+  enabled         INTEGER NOT NULL DEFAULT 1,
+  config_json     TEXT                          -- per-tool defaults (lookback days, benchmark ticker, quick-pick pairs, etc.)
 );

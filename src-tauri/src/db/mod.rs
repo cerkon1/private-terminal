@@ -66,6 +66,11 @@ impl Db {
                 "user_hidden",
                 "ALTER TABLE news_feeds ADD COLUMN user_hidden INTEGER NOT NULL DEFAULT 0",
             ),
+            (
+                "fred_series",
+                "tile_visible",
+                "ALTER TABLE fred_series ADD COLUMN tile_visible INTEGER NOT NULL DEFAULT 1",
+            ),
         ];
         for (table, col, sql) in migrations {
             match self.conn.execute(sql, []) {
@@ -273,12 +278,14 @@ pub struct NewsItemRow {
 impl Db {
     /// List all FRED series registered in the DB, ordered by category then id.
     /// Used by the batch dashboard command to enumerate what to show.
+    /// Filters `tile_visible = 1` so v1.1 Analysis-only series (e.g. USREC for
+    /// recession bars) don't surface as MACRO tiles.
     pub fn list_fred_series(&self) -> Result<Vec<FredSeriesRow>, String> {
         let mut stmt = self
             .conn
             .prepare(
                 "SELECT series_id, title, units, frequency, category, last_fetched \
-                 FROM fred_series ORDER BY category, series_id",
+                 FROM fred_series WHERE tile_visible = 1 ORDER BY category, series_id",
             )
             .map_err(|e| e.to_string())?;
         let rows = stmt
@@ -880,5 +887,65 @@ impl Db {
             })
             .collect::<Vec<_>>();
         Ok(rows)
+    }
+
+    // ──────── v1.1 Analysis helpers ────────
+
+    /// (date, close) pairs ascending by date, filtering NULL closes. Tighter
+    /// shape than `all_price_bars_ohlcv` for analysis paths that only care
+    /// about the close series (correlations, alignment, etc.).
+    pub fn close_history(
+        &self,
+        ticker: &str,
+        data_source: &str,
+    ) -> Result<Vec<(String, f64)>, String> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT bar_date, close FROM price_history \
+                 WHERE ticker = ?1 AND data_source = ?2 AND close IS NOT NULL \
+                 ORDER BY bar_date ASC",
+            )
+            .map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(params![ticker, data_source], |row| {
+                let d: String = row.get(0)?;
+                let v: Option<String> = row.get(1)?;
+                Ok((d, v))
+            })
+            .map_err(|e| e.to_string())?
+            .filter_map(|r| {
+                r.ok()
+                    .and_then(|(d, v_opt)| v_opt.and_then(|s| s.parse::<f64>().ok()).map(|v| (d, v)))
+            })
+            .collect::<Vec<_>>();
+        Ok(rows)
+    }
+
+    /// Bar count, earliest date, latest date for (ticker, data_source).
+    /// Powers the Analysis chip-picker greyed-chip rendering. Returns `None`
+    /// when the ticker has no bars yet.
+    pub fn ticker_coverage(
+        &self,
+        ticker: &str,
+        data_source: &str,
+    ) -> Result<Option<(u32, String, String)>, String> {
+        self.conn
+            .query_row(
+                "SELECT COUNT(*), MIN(bar_date), MAX(bar_date) FROM price_history \
+                 WHERE ticker = ?1 AND data_source = ?2 AND close IS NOT NULL",
+                params![ticker, data_source],
+                |row| {
+                    let n: i64 = row.get(0)?;
+                    let earliest: Option<String> = row.get(1)?;
+                    let latest: Option<String> = row.get(2)?;
+                    Ok((n, earliest, latest))
+                },
+            )
+            .map(|(n, earliest, latest)| match (earliest, latest) {
+                (Some(e), Some(l)) if n > 0 => Some((n as u32, e, l)),
+                _ => None,
+            })
+            .map_err(|e| e.to_string())
     }
 }
