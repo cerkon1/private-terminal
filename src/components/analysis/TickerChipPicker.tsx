@@ -51,21 +51,23 @@ export function TickerChipPicker({ selected, onChange, minBarsRequired }: Props)
   }, [available]);
 
   // Autocomplete candidates: prefix-match (case-insensitive) on ticker, not
-  // already selected. Limit to 12 results so the dropdown stays scannable.
+  // already selected. Cap autocomplete results at 12 for scannability; with
+  // no query, show all and let the dropdown scroll (otherwise long
+  // watchlists can't surface alphabetically-late tickers without typing).
   const candidates = useMemo(() => {
     const q = query.trim().toUpperCase();
     const selectedSet = new Set(selected.map((s) => `${s.ticker}::${s.dataSource}`));
     const all = available.filter(
       (c) => !selectedSet.has(`${c.ticker}::${c.dataSource}`),
     );
-    const filtered = q
-      ? all.filter(
-          (c) =>
-            c.ticker.toUpperCase().startsWith(q) ||
-            (c.displayName?.toUpperCase().includes(q) ?? false),
-        )
-      : all;
-    return filtered.slice(0, 12);
+    if (!q) return all;
+    return all
+      .filter(
+        (c) =>
+          c.ticker.toUpperCase().startsWith(q) ||
+          (c.displayName?.toUpperCase().includes(q) ?? false),
+      )
+      .slice(0, 12);
   }, [available, query, selected]);
 
   // Click-outside dismiss for the dropdown.

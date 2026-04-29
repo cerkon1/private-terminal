@@ -101,10 +101,11 @@ impl Db {
     pub fn get_fred_series(&self, series_id: &str) -> Result<Option<FredSeriesRow>, String> {
         self.conn
             .query_row(
-                "SELECT series_id, title, units, frequency, category, last_fetched \
+                "SELECT series_id, title, units, frequency, category, last_fetched, tile_visible \
                  FROM fred_series WHERE series_id = ?1",
                 params![series_id],
                 |row| {
+                    let tv: i64 = row.get(6)?;
                     Ok(FredSeriesRow {
                         series_id: row.get(0)?,
                         title: row.get(1)?,
@@ -112,6 +113,7 @@ impl Db {
                         frequency: row.get(3)?,
                         category: row.get(4)?,
                         last_fetched: row.get(5)?,
+                        tile_visible: tv != 0,
                     })
                 },
             )
@@ -249,6 +251,9 @@ pub struct FredSeriesRow {
     pub frequency: Option<String>,
     pub category: Option<String>,
     pub last_fetched: Option<String>,
+    /// false = Analysis-only (e.g. USREC, treasury tenors below DGS10).
+    /// MACRO dashboard hides these; FRED fetcher still pulls observations.
+    pub tile_visible: bool,
 }
 
 pub struct NewsFeedRow {
@@ -276,20 +281,21 @@ pub struct NewsItemRow {
 }
 
 impl Db {
-    /// List all FRED series registered in the DB, ordered by category then id.
-    /// Used by the batch dashboard command to enumerate what to show.
-    /// Filters `tile_visible = 1` so v1.1 Analysis-only series (e.g. USREC for
-    /// recession bars) don't surface as MACRO tiles.
+    /// List ALL FRED series registered in the DB, ordered by category then id.
+    /// Includes Analysis-only series (`tile_visible = 0`); the MACRO dashboard
+    /// filters those out at tile-build time. The fetch path consumes this
+    /// uniformly so analysis observations stay populated.
     pub fn list_fred_series(&self) -> Result<Vec<FredSeriesRow>, String> {
         let mut stmt = self
             .conn
             .prepare(
-                "SELECT series_id, title, units, frequency, category, last_fetched \
-                 FROM fred_series WHERE tile_visible = 1 ORDER BY category, series_id",
+                "SELECT series_id, title, units, frequency, category, last_fetched, tile_visible \
+                 FROM fred_series ORDER BY category, series_id",
             )
             .map_err(|e| e.to_string())?;
         let rows = stmt
             .query_map([], |row| {
+                let tv: i64 = row.get(6)?;
                 Ok(FredSeriesRow {
                     series_id: row.get(0)?,
                     title: row.get(1)?,
@@ -297,6 +303,7 @@ impl Db {
                     frequency: row.get(3)?,
                     category: row.get(4)?,
                     last_fetched: row.get(5)?,
+                    tile_visible: tv != 0,
                 })
             })
             .map_err(|e| e.to_string())?

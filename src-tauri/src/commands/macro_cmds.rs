@@ -141,9 +141,15 @@ pub async fn list_macro_tiles(
     };
 
     // Phase 3: build tiles from current DB state (includes any fresh upserts).
+    // Hidden series (`tile_visible = 0`, e.g. v1.1 Analysis-only USREC + extra
+    // treasury tenors) are still fetched in Phase 2 so analysis tools have
+    // observations, but excluded from the dashboard tile list here.
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let mut tiles = Vec::with_capacity(all_rows.len());
     for row in all_rows {
+        if !row.tile_visible {
+            continue;
+        }
         let sid = row.series_id.clone();
         let tile = build_tile(&db, row, errors.get(&sid).cloned())?;
         tiles.push(tile);
