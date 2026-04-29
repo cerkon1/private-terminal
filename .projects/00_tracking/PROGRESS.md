@@ -1,15 +1,103 @@
 # Progress Log — Private Terminal
 
 ## Current Focus
-**Awaiting cold-eye tester feedback on v1.0.0-rc.1.** S15 (2026-04-28) was a three-track session: (1) walked through and locked all six pre-Phase-1 open questions on `docs/v11_analysis_design.md`; (2) tokens-system audit + `chartTheme.ts` extraction + `app.css` rgba consolidation; (3) **Phase 1 implementation plan** — nine-step planning walkthrough locking DB schema, Rust pattern (no trait, const registry + free functions), compute I/O shapes, alignment rules, IPC catalog, TS types, frontend component tree, routing/persistence, and verification gates. Plan written into `docs/v11_analysis_design.md` as the canonical spec for the Phase 1 build session. No functional changes shipped this session; tokens visual smoke-test passed. S14 (2026-04-27) shipped one-line FeatureChart tooltip precision fix + drafted the v1.1 Analysis-section design sketch.
+**v1.1 Analysis section Phase 1 shipped on master (2026-04-29, S16).** Correlations + Yield Curve tabs live behind ANALYSIS pinned sidebar entry. Backend: Rust `analysis/` module with const tool registry, no-trait per-tool typed compute functions, `align_close_prices` helper with 50%-coverage gate, 5 IPC commands, 10 math unit tests all green. Frontend: 4 React components (TickerChipPicker, CorrelationsTab, YieldCurveTab, AnalysisLayout), `useRecessionBars` hook with module-level cache, ECharts dual-pane yield-curve rendering with NBER recession-bar overlays. Smoke-tested end-to-end: BTC×ETH=0.84, AEM×AEM=1.00, recession bars visible over 1990/2001/2008-09/2020, yield curve term structure shows 5 tenors × 3 snapshots (today/6mo/5y), 11,162 spread observations.
 
-**Remaining before `1.0.0` final:**
+**Repo infrastructure also shipped this session (S16):** git init at v1.0.0-rc.1, full reorganization into `.projects/<NN_name>/` layout with credential-isolated `infrastructure/` folder (gitignored), archive convention for PROGRESS pruning. See S16 entry below.
+
+**Awaiting cold-eye tester feedback on v1.0.0-rc.1** (parallel track). Remaining before `1.0.0` final:
 1. Tester feedback round (cold-eye review). No code commitments until feedback lands.
-2. After verification, bump `0.1.0-rc.1` → `1.0.0` in 4 places (`package.json`, `Cargo.toml`, `tauri.conf.json`, `version.ts`) + rebuild.
+2. After verification, bump `1.0.0-rc.1` → `1.0.0` in 4 places (`package.json`, `Cargo.toml`, `tauri.conf.json`, `version.ts`) + rebuild.
 
-**7 of 9 v1 milestones + M8.5 + M8.6 polish + S12 release-blocker pass + S13 manage-watchlist refactor + RC.1 ship complete.**
+**v1.1 priority queue (post-Phase-1):** Phase 2 (Pairs + RRG, zero new data) → CoinGecko fetcher → bull/bear VRVP split → true log mode (Path a) → M9 features (overlay + Ctrl+K palette) → code signing.
 
 **Indicator naming note:** the quad-SMMA-state indicator was originally seeded as "Larsson Line" (trendscope's label). During S7 we renamed to **SMMA Ribbon** after confirming from the originator's own Medium post that the math is derivative of public community work, not his invention. Session logs below keep the original "Larsson" references as a historical record — code, DB seed, UI text, and `CLAUDE.md`/`DESIGN.md` use "SMMA Ribbon" going forward. See `memory/m6_indicator_rename.md`.
+
+### S16 — Git init + repo reorganization + PROGRESS prune + v1.1 Analysis Phase 1 (2026-04-29)
+
+Largest single session of the project. Three discrete arcs in one sitting: (1) infrastructure (git + reorg + archive), (2) v1.1 Phase 1 build (backend + frontend), (3) two rounds of smoke-test fixes. Final state: 9 new commits + 4 prior + 1 inherited = master at `ef12190`.
+
+**(1) Git initialization at v1.0.0-rc.1.**
+- Reviewed pre-existing 327-byte `.gitignore` + drafted robust replacement covering node deps, Vite/dist, Rust target/ (8.2 GB), env + SQLite + IDE/OS, `release/` (27 MB), `infrastructure/`, `.claude/settings.local.json`, Windows `nul`. `Cargo.lock` kept tracked (binary-app convention; PrivateACB pattern).
+- `git init` + first commit `1b9c85e` (chore: initial commit at v1.0.0-rc.1) — 198 files, 25,020 insertions.
+- Verified ignores at commit time: `.env` (FRED + Finnhub keys), 8.2 GB target/, 27 MB release/ all correctly excluded.
+
+**(2) Repo reorganization — `.projects/` structure.**
+- Convention: `00_*` = pinned/cross-cutting; `NN_<name>/` = sequential feature projects, numbered for findability. Screenshots live inside their project folder.
+- Skeleton: `.projects/00_bugs/`, `.projects/00_tracking/{archive,memory}/`, `.projects/01_initial_design/{images,icon_design,screenshots}/`, `.projects/02_v1_1_analysis/`.
+- Moves: PROGRESS.md + LESSONS.md + memory/ → 00_tracking/; DESIGN.md + docs/images/ + .corel_draw/ → 01_initial_design/; v11_analysis_design.md → 02_v1_1_analysis/; root screenshots/*.png → 01_initial_design/screenshots/. `Analaysis_review/` (typo'd) deleted; `screenshots/finnhub_stuff.md` (live API key + webhook secret scratchpad) moved to `infrastructure/` (gitignored sibling, never crosses into git).
+- `CLAUDE.md` path references rewritten + new "Project Organization" section documenting the convention. `.claude/commands/session-start.md` + `session-end.md` paths updated. Historical references inside PROGRESS/DESIGN/decision files left untouched (they record what paths were at the time — don't rewrite history).
+
+**(3) PROGRESS prune + archive convention.**
+- `archive/README.md` documents convention: filename `YYYY-MM-DD_<slug>.md`, immutable once written, prune triggers (major release OR >30 sessions OR >1000 lines), header schema (archived date + source commit + sessions covered + time span + reason + where-live-resumes), Python single-pass recipe with sanity-assert anchors before mutating.
+- First archive `archive/2026-04-29_v1_0_build_arc.md` carries S1–S13 verbatim (project inception → v1.0.0-rc.1 ship).
+- Pruned PROGRESS.md from 784 → 168 lines via single Python pass after a first-attempt false-start: initial mechanism did chunked Read + reconstructed Write (re-shipped ~25K tokens through the LLM); user flagged the inefficiency. Second-pass Python script slices `lines[:115] + POINTER + lines[737:]` in <1s.
+- Title refreshed `Personal Terminal → Private Terminal` (post-S11 user-visible rename).
+- Commit `866a338` (docs: prune PROGRESS.md and establish archive convention).
+
+**(4) Feature branch `feature/v1.1-analysis-phase-1`.**
+Branched from `master` at `866a338` for the Phase 1 build. Local-only (no remote yet). Merged back via fast-forward at session end; branch deleted post-merge.
+
+**(5) v1.1 Analysis Phase 1 — backend.**
+- **Pre-build verifications.** Confirmed `Db::seed()` location (`db/mod.rs:87`). Discovered S15 plan mis-flagged `tile_visible` migration as the project's first column-add — the existing migrations slice in `db/mod.rs:50-82` has 3 user_hidden migrations from M8.5 with the same error-swallow pattern (no `PRAGMA table_info` guard needed).
+- **DB layer (commit `71f3a34`):** `schema.sql` adds `tile_visible INTEGER NOT NULL DEFAULT 1` to fred_series + new `analysis_tools` table (id / display_name / scope / display_order / enabled / config_json). `seed.sql` adds USREC + DGS3MO/DGS2/DGS5/DGS30 (all `tile_visible=0`) + 2 analysis_tools rows (`correlation_matrix` cross_asset / `yield_curve` macro) + new `('analysis', NULL, 'ANALYSIS', 'virtual', 1, 1)` sector_groups row + display_order shifts. Migrations slice gets the fred_series.tile_visible row.
+- **Analysis module (`src-tauri/src/analysis/`, 7 files, ~540 LOC):** `mod.rs` (TickerKey, ExcludedTicker), `registry.rs` (`ANALYSIS_TOOLS` const + `AnalysisToolInfo` IPC shape), `align.rs` (align_close_prices with calendar-day window via `chrono::Duration` + 50%-coverage gate, log_returns, pearson with diagonal-pin), `correlations.rs` (compute_correlations + req/resp), `yield_curve.rs` (compute_yield_curve, 3 snapshots × 5 tenors + spread series 2s10s/3m10y), `coverage.rs` (list_tickers_with_coverage joining watchlist visibility with bar coverage), `macro_overlays.rs` (list_recession_segments run-length-encoded from USREC monthly 0/1). No trait per S15 Q2 — heterogeneous output shapes (matrix vs curve vs segment list) make a trait costlier than valuable.
+- **Math unit tests (`analysis/tests.rs`, 10, all pass):** pearson perfect ±, constant-y zero-var, short-input; log_returns basic + edges; align inner-join, exclusion-below-min, calendar-day trim, empty-input.
+- **DB helpers added (db/mod.rs):** `close_history(ticker, data_source)` → tighter shape than `all_price_bars_ohlcv` for analysis paths that only need closes. `ticker_coverage(ticker, data_source)` → bar count + earliest/latest dates for the chip-picker greyed-chip path.
+- **IPC layer (commit `9081acb`):** `commands/analysis_cmds.rs` with 5 `#[tauri::command]` wrappers (`list_analysis_tools` merging const registry + DB enabled/config_json; `compute_correlations`, `compute_yield_curve`, `list_recession_segments`, `list_tickers_with_coverage`); registered in `lib.rs::tauri::generate_handler!`. Dead-code warnings from previous commit cleared once IPC referenced all the analysis functions.
+
+**(6) v1.1 Analysis Phase 1 — frontend.**
+- **TS types (commit `bdb6492`):** `src/types/analysis.ts` mirroring the IPC contract — TickerKey, ExcludedTicker, AnalysisToolInfo, Correlations{Request,Response}, YieldCurve{Request,Response} + nested TenorPoint/CurveSnapshot/SpreadPoint, TickerCoverage, RecessionSegment. NaiveDate → ISO date string.
+- **CSS rename `.settings-tabs` → `.tab-strip`** across `app.css` + `SettingsModal.tsx` + `ManageWatchlistModal.tsx` (S15 Q7.B). Generic horizontal-tab pattern reused by Settings + Manage Watchlist + new Analysis layout. Class name shifts: `.settings-tab` → `.tab-strip__tab`, `--active` → `.tab-strip__tab--active`. No visual change.
+- **`useRecessionBars` hook:** module-level cache (`cachedSegments` + in-flight `Promise` dedup); one fetch per session shared across all consumers. Returns raw segments + ECharts `markArea`-shaped data array (`MarkAreaPair[]`).
+- **Components (commits `5aed75a`, `d58daa0`):**
+  - `TickerChipPicker` — chip + autocomplete (case-insensitive prefix on ticker, substring on display name) + greyed-chip rendering when `bar_count < lookback × 0.5` + bar-count tooltip (Q2 + Q6). Click-outside dismiss for dropdown. Stateless; selection lives in parent for `usePersistedState` per-tool persistence.
+  - `CorrelationsTab` — lookback dropdown 30/60/90/180/365, sticky-header heatmap table (no chart-lib dep — HTML table). Cell color via `rgba(var(--status-up-rgb), α)` / `--status-down-rgb` with α scaling 0.15..0.70 by |r|. Diagonal pinned to 1.0 in Rust compute. Footer shows bar count + date range + excluded-ticker list (in `--accent-amber`).
+  - `YieldCurveTab` — ECharts dual-pane (term-structure on category x-axis + spread on time x-axis with `markArea` recession overlay). Uses `getChartTheme()` from `chartTheme.ts`. Spread toggle 2s10s/3m10y. Snapshot anchor defaults to "latest" (snapshotDate: null on IPC).
+  - `AnalysisLayout` — tab strip dispatch via `ANALYSIS_TAB_REGISTRY` (id → ComponentType); persists `session.analysis_active_tab`; falls back to first visible tool when stored active id no longer enabled.
+- **Wire-up:** Sidebar `PINNED_IDS` extended to `['scanner', 'analysis', 'macro', 'news']`; App.tsx adds `case 'analysis'` → `<AnalysisLayout />`.
+
+**(7) First smoke test caught two issues** (screenshots `02_v1_1_analysis/screenshots/Screenshot 2026-04-29 19{0508,0603}.png`).
+- **Picker capped at 12 candidates regardless of query** — alphabetically-late tickers (BTC, SPY, etc.) invisible without typing on long watchlists. Fix in `TickerChipPicker.tsx`: cap only when query non-empty; with empty query return full list, dropdown's existing max-height + overflow-y handles scroll.
+- **Yield curve rendered with only DGS10 data, spread 0 observations** — `WHERE tile_visible=1` filter on `list_fred_series` cut hidden series out of the FRED fetch enumeration (`list_macro_tiles` Phase 1 used the same helper). USREC + 4 treasury tenors had zero observations because they were never fetched.
+  - Fix: revert SQL filter on `list_fred_series` (return all rows), add `tile_visible: bool` to `FredSeriesRow`, filter at tile-build time in `list_macro_tiles` Phase 3 (skip rows where `!row.tile_visible`). After fix + manual MACRO refresh: 11,162 spread observations + full yield curve rendered. Captured as **DB-10** in LESSONS (filter at display layer, not enumeration layer).
+- Commit `e5bb299` (fix: fetch hidden FRED series + uncap picker dropdown).
+
+**(8) Second smoke caught recession-bar visibility** (screenshot `Screenshot 2026-04-29 191205.png` showed term structure populated but no NBER bars on spread).
+- markArea was rendering correctly but `α=0.18 + rgb(150,150,150)` fell below visual noise floor against dark background. Bumped α=0.18→0.30 + swapped hardcoded rgb for `rgba(var(--text-tertiary-rgb), 0.30)` token. Footer rewritten to always show segment count for diagnosability ("35 NBER recession segments" — full USREC history goes back to 1854; ~5 visible in the spread chart's 1982+ date range).
+- Commit `ef12190` (fix: bump recession-bar visibility + diagnostic footer). Screenshot `Screenshot 2026-04-29 191752.png` confirms bars visible over 1981-82, ~1990, ~2001, 2008-09, 2020.
+
+**(9) Merge to master + branch cleanup.**
+- All gates green: `cargo check --no-default-features` clean (zero warnings on master); `cargo test --lib analysis::tests` 10/10; `tsc --noEmit` clean; `npm run build` 4.31s, 658 modules (chunk-size warning carries from S9).
+- Fast-forward merge `master → ef12190` (31 files changed, 2,225+/30-). `feature/v1.1-analysis-phase-1` branch deleted.
+
+**Course corrections in-session.**
+- **`tile_visible` filter location** — initially put it in `list_fred_series` SQL, which silently broke the FRED fetch for hidden series. Lesson: separate "what to enumerate" from "what to display." See LESSONS DB-10.
+- **Picker cap** — autocomplete-style cap-at-12 was right impulse but hostile UX with empty query. Cap conditional on query presence is the cleaner contract.
+- **PROGRESS prune mechanism** — first attempt did chunked Read + reconstructed Write; user flagged the LLM-token cost of re-shipping ~25K tokens. Second pass used single Python pass + sanity-assert anchors. Pattern captured as the canonical recipe in `archive/README.md`.
+- **MSVC incremental cache corruption** during long-running tauri:dev session — known issue (LESSONS TB-2). Cleared `target/debug/incremental/` (1.9 GB) without touching dependency builds; resolved on restart.
+- **Cargo.lock** initially gitignored from the original `.gitignore`; corrected during git-init pass (binary app, not library — Cargo.lock should track per PrivateACB pattern).
+
+**Discussions parked / scope deferred.**
+- **Bulk-modal ticker selection** (S15 Q2 spec'd "chip picker with autocomplete + modal for bulk"). Shipped chip + autocomplete only; bulk-add modal can land if user feedback shows it's needed. Clear extension point in `TickerChipPicker.tsx`.
+- Smoke-test items not literally cross-checked: SPY×SPY=1.000 (verified via AEM×AEM=1.00 and BTC×BTC=1.00, same diagonal-pin property), GLD×SPY mildly negative, FRED published-value cross-check on yield curve, 2s10s↔3m10y toggle exercise, lookback 90d→365d switch, greyed-chip tooltip text. None blocking; all paper checks against published values.
+
+**Build artifacts.**
+- 9 commits on feature branch, fast-forwarded to master:
+  - `71f3a34` feat(analysis): scaffold v1.1 Analysis section — schema, registry, math primitives
+  - `9081acb` feat(analysis): IPC layer — 5 Tauri commands wrapping the analysis module
+  - `bdb6492` feat(analysis): TS types, CSS tab-strip rename, useRecessionBars hook
+  - `5aed75a` feat(analysis): TickerChipPicker + CorrelationsTab + heatmap CSS
+  - `d58daa0` feat(analysis): YieldCurveTab + AnalysisLayout + sidebar/router wire-up
+  - `e5bb299` fix(analysis): fetch hidden FRED series + uncap picker dropdown
+  - `ef12190` fix(analysis): bump recession-bar visibility + diagnostic footer
+- Plus 2 infrastructure commits: `1b9c85e` initial git, `866a338` PROGRESS prune.
+
+**Next session entry point.**
+- **If tester feedback lands on RC1:** triage bugs/polish/discoverability/v1.1; fix in-scope items; bump `1.0.0-rc.1` → `1.0.0` in 4 files; rebuild; ship final.
+- **If proceeding to v1.1 Phase 2:** Pairs + RRG (zero new data, registry-driven additions only). Mirrors Phase 1 pattern — new `analysis/pairs.rs` + `analysis/rrg.rs` Rust modules + `PairsTab.tsx` + `RrgTab.tsx` components + 2 rows in `analysis_tools` seed + 2 entries in `ANALYSIS_TAB_REGISTRY`. RRG benchmark needs an explicit Apply button (S15 Q3 — JdK normalization too costly per-keystroke). Phase 1's chip-picker bulk-modal can land alongside if feedback warrants.
+
+---
 
 ### S15 — Analysis design walkthrough + tokens audit + chartTheme extraction (2026-04-28)
 
@@ -129,7 +217,12 @@ Sessions S1–S13 — the entire v1.0 build arc from project inception through t
 - Future indicators (post-v1) — MACD, Bollinger Bands, Ichimoku, Volume Profile, candlestick patterns. All plug into the same trait.
 - v1.1 feature candidates (from brainstorm): seasonality heatmap, correlation heatmap, yield curve viz, earnings/economic calendar, backtesting module
 - Backtesting module (trendscope's own "Discovered" gap — "we've never measured whether flips are profitable")
-- **v1.1 Analysis section design sketch** (`docs/v11_analysis_design.md`, S14) — 4-phase plan for cross-asset analysis tools (correlations, yield curve, pairs, RRG, regime quadrant, sentiment) + parallel FeatureChart per-ticker enhancements (drawdown, vol cone, return dist, seasonality, AVWAP). Registry-driven, mirrors M6 indicator pattern. Six pre-Phase-1 open questions flagged in the doc.
+- **v1.1 Analysis section design sketch** (`.projects/02_v1_1_analysis/v11_analysis_design.md`, S14) — 4-phase plan for cross-asset analysis tools. **Phase 1 (Correlations + Yield Curve) shipped on master 2026-04-29 (S16).** Phase 2 (Pairs + RRG) next; Phase 3 (regime quadrant + recession prob + FCI) and Phase 4 (COT + AAII + VIX term) follow.
+
+### Deferred from v1.1 Phase 1 (2026-04-29, S16)
+- **Bulk-modal ticker selection on TickerChipPicker.** S15 Q2 spec'd "chip picker with autocomplete + modal for bulk"; shipped chip + autocomplete only. Add a `+ Bulk` button on the picker that opens a checklist-modal grouped by sector_group when feedback shows users want to add 5+ tickers at once. Extension point clear in `TickerChipPicker.tsx`.
+- **Smoke-test items not literally cross-checked.** SPY×SPY=1.000 (verified via AEM×AEM and BTC×BTC, same diagonal-pin property), GLD×SPY mildly negative, FRED published-value cross-check on yield curve, 2s10s↔3m10y toggle exercise, lookback 90d→365d switch, greyed-chip tooltip text. None blocking; paper checks against published values.
+- **`list_recession_segments` single-fetch verification via DevTools.** Hook is wired with module-level cache + Promise dedup so it should fire once per session, but only one consumer (YieldCurveTab) in Phase 1. Verify behavior is correct when Phase 3 adds a second consumer.
 - **Per-series tooltip valueFormatter on candlestick chart** (S14) — current tooltip-level formatter applies one decimal-tier rule to all series (OHLC, SMMA, RSI, ATR, volume). RSI lands at 4dp instead of ideal 2dp; volume shows raw int instead of K/M/B. Escalate to per-series formatters if noise becomes a complaint.
 
 ### Deferred during M8.6 polish (2026-04-25, S11) — VRVP since shipped (S12)

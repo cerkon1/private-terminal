@@ -491,7 +491,8 @@ CREATE TABLE fred_series (
   units          TEXT,
   frequency      TEXT,
   category       TEXT,
-  last_fetched   TEXT
+  last_fetched   TEXT,
+  tile_visible   INTEGER NOT NULL DEFAULT 1   -- 0 = Analysis-only series (USREC, treasury tenors below DGS10); MACRO dashboard hides at tile-build time
 );
 
 CREATE TABLE fred_observations (
@@ -529,9 +530,21 @@ CREATE TABLE config (
   key    TEXT PRIMARY KEY,
   value  TEXT
 );
+
+-- v1.1 Analysis tool registry (S16). Mirrors `indicators` registry shape;
+-- each tool is a Rust compute module + React tab component pair sharing `id`.
+-- Full spec in `.projects/02_v1_1_analysis/v11_analysis_design.md`.
+CREATE TABLE analysis_tools (
+  id              TEXT PRIMARY KEY,
+  display_name    TEXT NOT NULL,
+  scope           TEXT NOT NULL,             -- 'cross_asset' | 'macro' | 'sentiment'
+  display_order   INTEGER NOT NULL,
+  enabled         INTEGER NOT NULL DEFAULT 1,
+  config_json     TEXT
+);
 ```
 
-WAL mode. Seed data on first run populates `sector_groups`, `watchlist_tickers`, `fred_series`, `news_feeds`, `indicators`.
+WAL mode. Seed data on first run populates `sector_groups`, `watchlist_tickers`, `fred_series`, `news_feeds`, `indicators`, `analysis_tools`.
 
 ---
 
