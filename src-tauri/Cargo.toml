@@ -1,0 +1,58 @@
+[package]
+name = "personal-terminal"
+version = "1.0.0-rc.1"
+description = "Private Terminal — personal Bloomberg-style desktop research dashboard"
+edition = "2021"
+
+[lib]
+name = "personal_terminal_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri core
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+# Folder picker for the Storage tab's Move/Backup actions (M8.5 (b)).
+tauri-plugin-dialog = "2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Storage — plain SQLite, no SQLCipher (personal, not encrypted)
+rusqlite = { version = "0.30", features = ["bundled"] }
+
+# Async runtime + HTTP
+tokio = { version = "1.35", features = ["full"] }
+futures = "0.3"
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Config / env
+dotenvy = "0.15"
+dirs = "5.0"
+
+# RSS/Atom parsing (M7). feed-rs handles both feed formats uniformly and
+# preserves <guid>/<id> for dedup keys.
+feed-rs = "1.5"
+# SHA-256 for synthetic guid fallback when a feed emits items without <guid>.
+sha2 = "0.10"
+
+# Errors + logging
+anyhow = "1.0"
+thiserror = "1.0"
+log = "0.4"
+env_logger = "0.10"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 2

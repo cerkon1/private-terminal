@@ -1,0 +1,96 @@
+/* Personal Terminal — Design Tokens
+   Aligned with PrivateACB token conventions. Single source of truth for
+   anything color/spacing/typography across the frontend.
+
+   Light-theme readiness (S15): tokens marked with `[L]` would need a light-
+   theme counterpart if/when a light theme arc is committed. Tokens without
+   the marker (state-bull/bear/neutral, accent-amber/yellow/blue, fonts,
+   spacing, radii) are theme-agnostic and stay the same across modes. No
+   light theme is built yet — this is just structural prep.
+
+   `-rgb` variants are the raw channel triplets for `rgba(var(--*-rgb), α)`
+   usage. Rust cannot read CSS vars — Rust-side mirrors of state-bull/bear/
+   neutral live in `src-tauri/src/indicators/smma_ribbon.rs`. Keep in sync. */
+
+:root {
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.5rem;
+  --space-2xl: 2rem;
+
+  /* Terminal palette — dark, info-dense */
+  --bg-base: #0a0e14;                 /* [L] */
+  --bg-base-rgb: 10, 14, 20;          /* [L] */
+  --bg-surface: #0f141b;              /* [L] */
+  --bg-surface-rgb: 15, 20, 27;       /* [L] */
+  --bg-elevated: #151c25;             /* [L] */
+  --border-subtle: #1f2937;           /* [L] */
+  --border-emphasis: #334155;         /* [L] */
+
+  --text-primary: #e5e7eb;            /* [L] */
+  --text-primary-rgb: 229, 231, 235;  /* [L] */
+  --text-secondary: #9ca3af;          /* [L] */
+  --text-secondary-rgb: 156, 163, 175;/* [L] */
+  --text-tertiary: #6b7280;           /* [L] */
+  --text-tertiary-rgb: 107, 114, 128; /* [L] */
+
+  --accent-cyan: #00f7ff;             /* [L] — needs deeper variant on white */
+  --accent-cyan-rgb: 0, 247, 255;     /* [L] */
+  --status-up: #22c55e;
+  --status-up-rgb: 34, 197, 94;
+  --status-down: #ef4444;
+  --status-down-rgb: 239, 68, 68;
+  --status-neutral: #6b7280;
+  --status-neutral-rgb: 107, 114, 128;
+
+  /* New semantic accents (added S15 — used by Scanner flip indicator + VRVP
+     POC + queued for v1.1 Analysis section: RRG quadrants, Yield Curve
+     threshold lines, Recession Probability warning bands).
+     - amber: warning / flip / "improving" RRG quadrant
+     - yellow: highlight / VRVP POC / "selected" emphasis
+     - blue: "weakening" RRG quadrant; distinct from accent-cyan so a future
+       light theme can re-tune the two independently. */
+  --accent-amber: #f59e0b;
+  --accent-amber-rgb: 245, 158, 11;
+  --accent-yellow: #facc15;
+  --accent-yellow-rgb: 250, 204, 21;
+  --accent-blue: #3b82f6;
+  --accent-blue-rgb: 59, 130, 246;
+
+  /* SMMA Ribbon / Scanner state palette. Single source of truth for
+     anything that colors bullish/bearish/neutral on the frontend.
+     The `-rgb` variants are the raw channels for rgba() tinting.
+     IMPORTANT: Rust cannot read CSS vars — the Rust-side mirror of
+     these lives in `src-tauri/src/indicators/smma_ribbon.rs`
+     (FILL_BULL / FILL_BEAR / FILL_NEUTRAL / FLIP_*). Keep in sync. */
+  --state-bull: #0891b2;
+  --state-bull-rgb: 8, 145, 178;
+  --state-bear: #fb7185;
+  --state-bear-rgb: 251, 113, 133;
+  --state-neutral: #9ca3af;
+  --state-neutral-rgb: 156, 163, 175;
+
+  /* Typography */
+  --font-mono: 'JetBrains Mono', 'Consolas', 'Menlo', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+  /* Font sizes bumped by ~1px each in S11 (M8.6) for readability across
+     Manage Groups, the footer status bar, and edit-panel tables. Existing
+     fixed-row layouts (`grid-auto-rows: 150px` per FL-2) absorb the bump
+     without breaking. Don't bump again without an audit — beyond ~14px
+     mono in info-dense tables we lose row-density. */
+  --fs-xs: 0.75rem;     /* was 0.6875 — 11→12px */
+  --fs-sm: 0.875rem;    /* was 0.8125 — 13→14px */
+  --fs-md: 0.9375rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.5rem;
+  --fs-2xl: 2rem;
+
+  /* Radii */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+}

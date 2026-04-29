@@ -1,0 +1,60 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Vite / TypeScript
+dist/
+dist-ssr/
+.vite/
+*.tsbuildinfo
+*.local
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/schemas/
+src-tauri/WixTools/
+# Cargo.lock IS tracked — this is a binary app, not a library
+
+# Env + secrets
+.env
+.env.local
+.env.*.local
+
+# SQLite (app data lives in %APPDATA% in production; ignore defensively in case of stray test DBs)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Release artifacts (rebuildable from a git tag)
+release/
+
+# Test / coverage
+coverage/
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Claude Code local-only (keep .claude/commands/ tracked — those are project-shared slash commands)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Windows shell quirk (PowerShell sometimes creates a `nul` file from accidental redirection)
+nul
+
+# Infrastructure — credential scratchpads, API keys, webhook secrets, local-only operational notes.
+# This whole folder is for items that must NEVER cross into git history.
+infrastructure/
+
+# Defensive catch-alls
+**/api_keys.txt
+**/*credentials*.txt

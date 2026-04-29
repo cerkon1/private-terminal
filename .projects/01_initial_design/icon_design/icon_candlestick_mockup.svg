@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Private Terminal — icon mockup at 1024×1024.
+  Proportions per spec: candle = 50% body width, 1:2.5:1 wick:body:wick height.
+  Open in browser or import into CorelDraw to compare with your draft.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Octagon background. Dark navy fill (#0a0e14 = your --bg-base).
+       Transparent canvas outside so the icon sits cleanly on any desktop.
+       Cyan stroke gives the edge definition that survives downsample. -->
+  <polygon
+    points="250,64 774,64 960,250 960,774 774,960 250,960 64,774 64,250"
+    fill="#0a0e14"
+    stroke="#00f7ff"
+    stroke-width="24"
+    stroke-linejoin="miter"
+  />
+
+  <!-- Upper wick — 128×164 at center top -->
+  <rect x="448" y="143" width="128" height="164" fill="#00f7ff" />
+
+  <!-- Body — 512×410, vertically centered. The chunky body is what makes
+       the candle still readable at 16px (becomes ~8px wide pixel block). -->
+  <rect x="256" y="307" width="512" height="410" fill="#00f7ff" />
+
+  <!-- Lower wick — mirror of upper -->
+  <rect x="448" y="717" width="128" height="164" fill="#00f7ff" />
+</svg>
