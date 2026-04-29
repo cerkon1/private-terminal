@@ -1833,3 +1833,292 @@ html, body, #root {
   font-size: 0.85em;
   font-weight: normal;
 }
+
+/* ──────────────── v1.1 Analysis section ──────────────── */
+
+.analysis-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.analysis-layout__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-lg);
+}
+
+.analysis-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-height: 0;
+}
+
+.analysis-tab__controls {
+  display: flex;
+  gap: var(--space-lg);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.analysis-tab__control-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.analysis-tab__control-group--grow {
+  flex: 1 1 auto;
+}
+
+.analysis-tab__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.analysis-tab__select {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  padding: var(--space-xs) var(--space-sm);
+  cursor: pointer;
+}
+
+.analysis-tab__placeholder,
+.analysis-tab__status {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  padding: var(--space-md) 0;
+}
+
+.analysis-tab__error {
+  color: var(--status-down);
+  background: rgba(var(--status-down-rgb), 0.08);
+  border: 1px solid rgba(var(--status-down-rgb), 0.3);
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+
+.analysis-tab__footnote {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.analysis-tab__excluded {
+  color: var(--accent-amber);
+}
+
+/* Chip-based ticker picker (Q2 + Q6) */
+
+.chip-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 240px;
+}
+
+.chip-picker__chips {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  align-items: center;
+  padding: var(--space-xs);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  min-height: calc(var(--space-md) * 2.5);
+}
+
+.chip-picker__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: rgba(var(--accent-cyan-rgb), 0.15);
+  border: 1px solid rgba(var(--accent-cyan-rgb), 0.4);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  padding: 2px var(--space-xs);
+}
+
+.chip-picker__chip--greyed {
+  background: rgba(var(--text-tertiary-rgb), 0.08);
+  border-color: rgba(var(--text-tertiary-rgb), 0.3);
+  color: var(--text-tertiary);
+}
+
+.chip-picker__chip-symbol {
+  letter-spacing: 0.04em;
+}
+
+.chip-picker__chip-remove {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1em;
+  line-height: 1;
+  padding: 0 2px;
+  opacity: 0.7;
+}
+
+.chip-picker__chip-remove:hover {
+  opacity: 1;
+}
+
+.chip-picker__input-wrap {
+  position: relative;
+  flex: 1 1 80px;
+  min-width: 80px;
+}
+
+.chip-picker__input {
+  background: transparent;
+  color: var(--text-primary);
+  border: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  padding: 2px var(--space-xs);
+  width: 100%;
+  outline: none;
+}
+
+.chip-picker__dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  min-width: 220px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  z-index: 20;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.chip-picker__candidate {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.chip-picker__candidate:hover {
+  background: rgba(var(--accent-cyan-rgb), 0.12);
+}
+
+.chip-picker__candidate--greyed {
+  color: var(--text-tertiary);
+}
+
+.chip-picker__candidate--empty {
+  color: var(--text-tertiary);
+  cursor: default;
+  font-style: italic;
+}
+
+.chip-picker__candidate--empty:hover {
+  background: transparent;
+}
+
+.chip-picker__candidate-symbol {
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.chip-picker__candidate-name {
+  color: var(--text-secondary);
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+}
+
+.chip-picker__candidate-bars {
+  color: var(--text-tertiary);
+  font-size: var(--fs-xs);
+  flex: 0 0 auto;
+}
+
+.chip-picker__error {
+  color: var(--status-down);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+/* Correlation matrix heatmap (text + cell-bg only — no extra deps) */
+
+.corr-matrix-wrap {
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.corr-matrix {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+
+.corr-matrix th,
+.corr-matrix td {
+  padding: var(--space-xs) var(--space-sm);
+  text-align: center;
+  white-space: nowrap;
+  border: 1px solid var(--border-subtle);
+}
+
+.corr-matrix__corner {
+  background: var(--bg-base);
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 2;
+}
+
+.corr-matrix__col-head {
+  background: var(--bg-base);
+  color: var(--text-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.corr-matrix__row-head {
+  background: var(--bg-base);
+  color: var(--text-secondary);
+  position: sticky;
+  left: 0;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.corr-matrix__cell {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  min-width: 56px;
+}
