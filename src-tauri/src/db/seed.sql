@@ -10,28 +10,30 @@
 -- Flip enabled=1 when the section's milestone lands.
 INSERT OR IGNORE INTO sector_groups (id, parent_id, display_name, data_source, display_order, enabled) VALUES
   ('scanner',      NULL, 'SCANNER',      'virtual',   0, 1),
-  ('macro',        NULL, 'MACRO',        'fred',      1, 1),
-  ('indices',      NULL, 'INDICES',      'yahoo',     2, 1),
-  ('crypto',       NULL, 'CRYPTO',       'coingecko', 3, 0),
-  ('us_equities',  NULL, 'US EQUITIES',  'yahoo',     4, 1),
-  ('ca_equities',  NULL, 'CA EQUITIES',  'yahoo',     5, 1),
-  ('futures_fx',   NULL, 'FUTURES & FX', 'yahoo',     6, 0),
-  ('news',         NULL, 'NEWS',         'mixed',     7, 0);
+  ('analysis',     NULL, 'ANALYSIS',     'virtual',   1, 1),
+  ('macro',        NULL, 'MACRO',        'fred',      2, 1),
+  ('indices',      NULL, 'INDICES',      'yahoo',     3, 1),
+  ('crypto',       NULL, 'CRYPTO',       'coingecko', 4, 0),
+  ('us_equities',  NULL, 'US EQUITIES',  'yahoo',     5, 1),
+  ('ca_equities',  NULL, 'CA EQUITIES',  'yahoo',     6, 1),
+  ('futures_fx',   NULL, 'FUTURES & FX', 'yahoo',     7, 0),
+  ('news',         NULL, 'NEWS',         'mixed',     8, 0);
 
 -- Flip sector_groups to enabled=1 when a milestone lands. INSERT OR IGNORE
 -- above leaves existing rows' `enabled` unchanged, so we UPDATE explicitly.
-UPDATE sector_groups SET enabled = 1 WHERE id IN ('ca_equities', 'crypto', 'futures_fx', 'news');
+UPDATE sector_groups SET enabled = 1 WHERE id IN ('analysis', 'ca_equities', 'crypto', 'futures_fx', 'news');
 
 -- Keep sidebar display_order current when rows are inserted (previous seeds
 -- stored these values; INSERT OR IGNORE won't refresh them).
 UPDATE sector_groups SET display_order = 0 WHERE id = 'scanner';
-UPDATE sector_groups SET display_order = 1 WHERE id = 'macro';
-UPDATE sector_groups SET display_order = 2 WHERE id = 'indices';
-UPDATE sector_groups SET display_order = 3 WHERE id = 'crypto';
-UPDATE sector_groups SET display_order = 4 WHERE id = 'us_equities';
-UPDATE sector_groups SET display_order = 5 WHERE id = 'ca_equities';
-UPDATE sector_groups SET display_order = 6 WHERE id = 'futures_fx';
-UPDATE sector_groups SET display_order = 7 WHERE id = 'news';
+UPDATE sector_groups SET display_order = 1 WHERE id = 'analysis';
+UPDATE sector_groups SET display_order = 2 WHERE id = 'macro';
+UPDATE sector_groups SET display_order = 3 WHERE id = 'indices';
+UPDATE sector_groups SET display_order = 4 WHERE id = 'crypto';
+UPDATE sector_groups SET display_order = 5 WHERE id = 'us_equities';
+UPDATE sector_groups SET display_order = 6 WHERE id = 'ca_equities';
+UPDATE sector_groups SET display_order = 7 WHERE id = 'futures_fx';
+UPDATE sector_groups SET display_order = 8 WHERE id = 'news';
 
 -- Indicator registry — each row mirrors a Rust Indicator impl. Adding a new
 -- indicator = one Rust module + one row here.

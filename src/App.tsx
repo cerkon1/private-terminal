@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
+import { AnalysisLayout } from './components/analysis/AnalysisLayout';
 import AppHeader from './components/AppHeader';
 import MacroDashboard from './components/MacroDashboard';
 import ManageWatchlistModal from './components/ManageWatchlistModal';
@@ -95,6 +96,9 @@ function SectionView({
 }) {
   if (section === 'scanner') {
     return <Scanner />;
+  }
+  if (section === 'analysis') {
+    return <AnalysisLayout />;
   }
   if (section === 'macro') {
     return <MacroDashboard onDataChanged={onDataChanged} />;

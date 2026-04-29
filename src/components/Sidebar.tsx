@@ -15,7 +15,7 @@ type Props = {
 // Sections that ship as infrastructure — always visible, always at the top,
 // never user-managed. Order here is the rendered order regardless of
 // each row's `display_order` in the DB.
-const PINNED_IDS = ['scanner', 'macro', 'news'];
+const PINNED_IDS = ['scanner', 'analysis', 'macro', 'news'];
 
 export default function Sidebar({ activeId, onSelect, onManage, groupsVersion }: Props) {
   const [groups, setGroups] = useState<SectorGroup[] | null>(null);

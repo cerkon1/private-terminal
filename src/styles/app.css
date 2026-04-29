@@ -1893,6 +1893,13 @@ html, body, #root {
   cursor: pointer;
 }
 
+.analysis-tab__readout {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  padding: var(--space-xs) 0;
+}
+
 .analysis-tab__placeholder,
 .analysis-tab__status {
   color: var(--text-tertiary);

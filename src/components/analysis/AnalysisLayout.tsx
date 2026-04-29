@@ -1,0 +1,93 @@
+import { useEffect, useMemo, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+
+import { usePersistedState } from '../../hooks/usePersistedState';
+import type { AnalysisToolInfo } from '../../types/analysis';
+import { ANALYSIS_TAB_REGISTRY } from './registry';
+
+/// Top-level shell for the v1.1 Analysis section. Fetches the registry
+/// (const Rust list merged with DB enabled/config_json) and dispatches
+/// the active tab through ANALYSIS_TAB_REGISTRY.
+///
+/// Active-tab state persists under session.analysis_active_tab.
+/// Tools missing from the React registry render a placeholder so a
+/// half-implemented Phase 2+ tool doesn't crash the section.
+export function AnalysisLayout() {
+  const [tools, setTools] = useState<AnalysisToolInfo[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [activeId, setActiveId] = usePersistedState<string>(
+    'session.analysis_active_tab',
+    'correlation_matrix',
+  );
+
+  useEffect(() => {
+    let active = true;
+    invoke<AnalysisToolInfo[]>('list_analysis_tools')
+      .then((r) => {
+        if (!active) return;
+        setTools(r);
+      })
+      .catch((e) => {
+        if (!active) return;
+        setLoadError(typeof e === 'string' ? e : String(e));
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Sorted, enabled-only tab list.
+  const visibleTools = useMemo(() => {
+    if (!tools) return [];
+    return tools
+      .filter((t) => t.enabled)
+      .slice()
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+  }, [tools]);
+
+  // If the persisted active tab disappeared (disabled or removed), fall
+  // back to the first visible one so the section stays usable.
+  useEffect(() => {
+    if (visibleTools.length === 0) return;
+    if (!visibleTools.some((t) => t.id === activeId)) {
+      setActiveId(visibleTools[0].id);
+    }
+  }, [visibleTools, activeId, setActiveId]);
+
+  const ActiveComponent = ANALYSIS_TAB_REGISTRY[activeId];
+
+  return (
+    <div className="analysis-layout">
+      {loadError && (
+        <div className="analysis-tab__error" style={{ margin: 'var(--space-md)' }}>
+          {loadError}
+        </div>
+      )}
+      <div className="tab-strip">
+        {visibleTools.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={`tab-strip__tab ${activeId === t.id ? 'tab-strip__tab--active' : ''}`}
+            onClick={() => setActiveId(t.id)}
+          >
+            {t.displayName}
+          </button>
+        ))}
+      </div>
+      <div className="analysis-layout__body">
+        {ActiveComponent ? (
+          <ActiveComponent />
+        ) : visibleTools.length === 0 ? (
+          <div className="analysis-tab__placeholder">
+            No analysis tools enabled.
+          </div>
+        ) : (
+          <div className="analysis-tab__placeholder">
+            Tool "{activeId}" has no component yet.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
