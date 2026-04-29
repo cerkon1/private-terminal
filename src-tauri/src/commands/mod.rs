@@ -1,3 +1,4 @@
+pub mod analysis_cmds;
 pub mod edit_cmds;
 pub mod feed_cmds;
 pub mod indicator_cmds;

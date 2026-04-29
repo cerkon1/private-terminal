@@ -82,6 +82,11 @@ pub fn run() {
             commands::settings_cmds::get_api_key_status,
             commands::settings_cmds::set_api_key,
             commands::settings_cmds::clear_api_key,
+            commands::analysis_cmds::list_analysis_tools,
+            commands::analysis_cmds::compute_correlations,
+            commands::analysis_cmds::compute_yield_curve,
+            commands::analysis_cmds::list_recession_segments,
+            commands::analysis_cmds::list_tickers_with_coverage,
         ])
         .run(tauri::generate_context!())
         .expect("error while running personal-terminal");
