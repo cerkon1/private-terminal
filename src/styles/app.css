@@ -1394,14 +1394,19 @@ html, body, #root {
   width: min(720px, 92vw);
 }
 
-.settings-tabs {
+/* Generic tab strip — used by Settings, Manage Watchlist, and Analysis.
+ * Renamed from .settings-tabs in v1.1 (S15 Q7.B) to reflect that Analysis
+ * reuses the same horizontal tab pattern. The .settings-tab class names
+ * propagated everywhere they were originally used; the new generic class is
+ * .tab-strip / .tab-strip__tab[--active]. */
+.tab-strip {
   display: flex;
   gap: 0;
   border-bottom: 1px solid var(--border-subtle);
   padding: 0 var(--space-lg);
 }
 
-.settings-tab {
+.tab-strip__tab {
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -1415,11 +1420,11 @@ html, body, #root {
   margin-bottom: -1px;
 }
 
-.settings-tab:hover {
+.tab-strip__tab:hover {
   color: var(--text-secondary);
 }
 
-.settings-tab--active {
+.tab-strip__tab--active {
   color: var(--accent-cyan);
   border-bottom-color: var(--accent-cyan);
 }

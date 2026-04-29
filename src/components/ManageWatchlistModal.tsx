@@ -66,12 +66,12 @@ export default function ManageWatchlistModal({ onClose, onChanged }: Props) {
           </button>
         </div>
 
-        <div className="settings-tabs">
+        <div className="tab-strip">
           {TABS.map((t) => (
             <button
               key={t.id}
               type="button"
-              className={`settings-tab ${tab === t.id ? 'settings-tab--active' : ''}`}
+              className={`tab-strip__tab ${tab === t.id ? 'tab-strip__tab--active' : ''}`}
               onClick={() => setTab(t.id)}
             >
               {t.label}
