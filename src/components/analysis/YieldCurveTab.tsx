@@ -74,7 +74,9 @@ function buildOption(
       ? undefined
       : {
           silent: true,
-          itemStyle: { color: 'rgba(150, 150, 150, 0.18)' },
+          itemStyle: {
+            color: `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--text-tertiary-rgb').trim()}, 0.30)`,
+          },
           data: recessionData,
         },
   };
@@ -262,8 +264,12 @@ export function YieldCurveTab() {
       {data && (
         <footer className="analysis-tab__footnote">
           {data.spreadSeries.length} spread observations · {data.spreadLabel}
-          {recession.segments.length > 0 && (
-            <> · {recession.segments.length} NBER recession bands shown</>
+          {' · '}
+          {recession.loaded
+            ? `${recession.segments.length} NBER recession segments`
+            : 'recession segments loading…'}
+          {recession.error && (
+            <span className="analysis-tab__excluded"> · recession error: {recession.error}</span>
           )}
         </footer>
       )}
