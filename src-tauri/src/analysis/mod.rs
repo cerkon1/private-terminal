@@ -12,8 +12,10 @@ use serde::{Deserialize, Serialize};
 pub mod align;
 pub mod correlations;
 pub mod coverage;
+pub mod financial_conditions;
 pub mod macro_overlays;
 pub mod pairs;
+pub mod recession_prob;
 pub mod registry;
 pub mod rrg;
 pub mod yield_curve;
@@ -39,4 +41,14 @@ pub struct ExcludedTicker {
     pub data_source: String,
     pub bar_count: u32,
     pub reason: String,
+}
+
+/// Single (date, value) pair for line-chart macro tools (Recession Prob, FCI).
+/// Date is ISO 8601; value is the parsed FRED observation (sentinels filtered
+/// upstream).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MacroPoint {
+    pub date: chrono::NaiveDate,
+    pub value: f64,
 }

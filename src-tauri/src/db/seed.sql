@@ -220,16 +220,21 @@ INSERT OR IGNORE INTO fred_series (series_id, title, units, frequency, category)
   ('DGS3MO',              '3-Month Treasury Constant Maturity Rate',                      'Percent',  'Daily',     'Rates'),
   ('DGS2',                '2-Year Treasury Constant Maturity Rate',                       'Percent',  'Daily',     'Rates'),
   ('DGS5',                '5-Year Treasury Constant Maturity Rate',                       'Percent',  'Daily',     'Rates'),
-  ('DGS30',               '30-Year Treasury Constant Maturity Rate',                      'Percent',  'Daily',     'Rates');
+  ('DGS30',               '30-Year Treasury Constant Maturity Rate',                      'Percent',  'Daily',     'Rates'),
+  -- Phase 3 — macro regime (Analysis-only)
+  ('RECPROUSM156N',       'NY Fed Recession Probability (12mo ahead)',                    'Percent',  'Monthly',   'Recession'),
+  ('NFCI',                'Chicago Fed National Financial Conditions Index',              'Index',    'Weekly',    'Conditions');
 
 -- v1.1 Analysis-only series. Idempotent on every boot — covers fresh installs
 -- (seeded with DEFAULT 1, then flipped here) and pre-v1.1 DB upgrades.
-UPDATE fred_series SET tile_visible = 0 WHERE series_id IN ('USREC', 'DGS3MO', 'DGS2', 'DGS5', 'DGS30');
+UPDATE fred_series SET tile_visible = 0 WHERE series_id IN ('USREC', 'DGS3MO', 'DGS2', 'DGS5', 'DGS30', 'RECPROUSM156N', 'NFCI');
 
 -- v1.1 Analysis tool registry — Phase 1 ships Correlations + Yield Curve.
 -- Phase 2/3/4 tools land via additional INSERT OR IGNORE rows; never re-key existing ids.
 INSERT OR IGNORE INTO analysis_tools (id, display_name, scope, display_order, enabled, config_json) VALUES
-  ('correlation_matrix', 'Correlations', 'cross_asset', 1, 1, NULL),
-  ('yield_curve',        'Yield Curve',  'macro',       2, 1, NULL),
-  ('pairs_ratio',        'Pairs',        'cross_asset', 3, 1, '{"quickPicks":[["BTC-USD","ETH-USD"],["GC=F","SI=F"],["HG=F","GC=F"],["^IXIC","^GSPC"]]}'),
-  ('rrg',                'RRG',          'cross_asset', 4, 1, '{"benchmark":"^GSPC","rsPeriod":14,"momentumPeriod":5,"tailLength":8}');
+  ('correlation_matrix',    'Correlations',         'cross_asset', 1, 1, NULL),
+  ('yield_curve',           'Yield Curve',          'macro',       2, 1, NULL),
+  ('pairs_ratio',           'Pairs',                'cross_asset', 3, 1, '{"quickPicks":[["BTC-USD","ETH-USD"],["GC=F","SI=F"],["HG=F","GC=F"],["^IXIC","^GSPC"]]}'),
+  ('rrg',                   'RRG',                  'cross_asset', 4, 1, '{"benchmark":"^GSPC","rsPeriod":14,"momentumPeriod":5,"tailLength":8}'),
+  ('recession_prob',        'Recession Prob',       'macro',       5, 1, NULL),
+  ('financial_conditions',  'Financial Conditions', 'macro',       6, 1, NULL);

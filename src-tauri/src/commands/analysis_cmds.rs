@@ -15,8 +15,10 @@ use tauri::State;
 use crate::analysis::{
     correlations::{self, CorrelationsRequest, CorrelationsResponse},
     coverage::{self, TickerCoverage},
+    financial_conditions::{self, FinancialConditionsRequest, FinancialConditionsResponse},
     macro_overlays::{self, RecessionSegment},
     pairs::{self, PairsRequest, PairsResponse},
+    recession_prob::{self, RecessionProbRequest, RecessionProbResponse},
     registry::{AnalysisToolInfo, ANALYSIS_TOOLS},
     rrg::{self, RrgRequest, RrgResponse},
     yield_curve::{self, YieldCurveRequest, YieldCurveResponse},
@@ -115,4 +117,22 @@ pub fn compute_rrg(
 ) -> Result<RrgResponse, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     rrg::compute_rrg(&db, request)
+}
+
+#[tauri::command]
+pub fn compute_recession_prob(
+    request: RecessionProbRequest,
+    state: State<'_, AppState>,
+) -> Result<RecessionProbResponse, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    recession_prob::compute_recession_prob(&db, request)
+}
+
+#[tauri::command]
+pub fn compute_financial_conditions(
+    request: FinancialConditionsRequest,
+    state: State<'_, AppState>,
+) -> Result<FinancialConditionsResponse, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    financial_conditions::compute_financial_conditions(&db, request)
 }

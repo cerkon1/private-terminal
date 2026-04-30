@@ -173,3 +173,40 @@ export type RrgResponse = {
   excluded: ExcludedTicker[];
   weeklyBars: number;
 };
+
+// ────── Macro line tools (Phase 3) — Recession Prob + FCI ──────
+
+export type MacroPoint = {
+  date: string;
+  value: number;
+};
+
+export type RecessionProbRequest = Record<string, never>;
+
+export type RecessionThresholds = {
+  warnPct: number;
+  imminentPct: number;
+};
+
+export type RecessionProbResponse = {
+  points: MacroPoint[];
+  current: MacroPoint | null;
+  thresholds: RecessionThresholds;
+  units: string;
+  seriesId: string;
+  latestDate: string | null;
+  observationCount: number;
+};
+
+export type FinancialConditionsRequest = Record<string, never>;
+
+export type FinancialConditionsResponse = {
+  points: MacroPoint[];
+  current: MacroPoint | null;
+  minValue: number | null;
+  maxValue: number | null;
+  units: string;
+  seriesId: string;
+  latestDate: string | null;
+  observationCount: number;
+};

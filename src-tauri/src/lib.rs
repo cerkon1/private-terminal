@@ -89,6 +89,8 @@ pub fn run() {
             commands::analysis_cmds::list_tickers_with_coverage,
             commands::analysis_cmds::compute_pair_ratio,
             commands::analysis_cmds::compute_rrg,
+            commands::analysis_cmds::compute_recession_prob,
+            commands::analysis_cmds::compute_financial_conditions,
         ])
         .run(tauri::generate_context!())
         .expect("error while running personal-terminal");

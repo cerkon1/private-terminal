@@ -54,6 +54,20 @@ pub const ANALYSIS_TOOLS: &[AnalysisToolMeta] = &[
             r#"{"benchmark":"^GSPC","rsPeriod":14,"momentumPeriod":5,"tailLength":8}"#,
         ),
     },
+    AnalysisToolMeta {
+        id: "recession_prob",
+        display_name: "Recession Prob",
+        scope: "macro",
+        display_order: 5,
+        default_config_json: None,
+    },
+    AnalysisToolMeta {
+        id: "financial_conditions",
+        display_name: "Financial Conditions",
+        scope: "macro",
+        display_order: 6,
+        default_config_json: None,
+    },
 ];
 
 /// IPC shape returned by `list_analysis_tools` — registry meta merged with
