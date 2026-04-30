@@ -1,17 +1,113 @@
 # Progress Log — Private Terminal
 
 ## Current Focus
-**v1.1 Analysis section Phase 1 shipped on master (2026-04-29, S16).** Correlations + Yield Curve tabs live behind ANALYSIS pinned sidebar entry. Backend: Rust `analysis/` module with const tool registry, no-trait per-tool typed compute functions, `align_close_prices` helper with 50%-coverage gate, 5 IPC commands, 10 math unit tests all green. Frontend: 4 React components (TickerChipPicker, CorrelationsTab, YieldCurveTab, AnalysisLayout), `useRecessionBars` hook with module-level cache, ECharts dual-pane yield-curve rendering with NBER recession-bar overlays. Smoke-tested end-to-end: BTC×ETH=0.84, AEM×AEM=1.00, recession bars visible over 1990/2001/2008-09/2020, yield curve term structure shows 5 tenors × 3 snapshots (today/6mo/5y), 11,162 spread observations.
+**v1.1 Analysis section Phase 2 + Phase 3 (lean) shipped on master (2026-04-30, S17).** Master at `d2e9a30`. Six Analysis tabs live: Correlations · Yield Curve · Pairs · RRG · Recession Prob · Financial Conditions. Phase 2 added Pairs (ratio + rolling z-score) + RRG (JdK rotation, weekly resample, four-quadrant scatter with tails); Phase 3 lean added Recession Prob (`RECPROUSM156N` line + 30/50% threshold lines + NBER bars) + FCI (`NFCI` line + zero baseline + NBER bars). All four new tabs ship with `<TabIntro>` per the new S17-codified pattern (subtitle + collapsible "How to read this" + collapsible "The math" + standard liability footer); Phase 1's two existing tabs were retrofitted same session. 17/17 analysis math tests green.
 
-**Repo infrastructure also shipped this session (S16):** git init at v1.0.0-rc.1, full reorganization into `.projects/<NN_name>/` layout with credential-isolated `infrastructure/` folder (gitignored), archive convention for PROGRESS pruning. See S16 entry below.
+**Phase 3 deferred:** Macro Regime Quadrant (4-quadrant scatter, growth × inflation trail) — held pending NAPM-vs-INDPRO growth-axis decision and the MACRO-tile-or-not call for Recession Prob + FCI (S15 Q4 spec'd "both surfaces" but lean path shipped Analysis-only). Both are clean follow-ups.
 
-**Awaiting cold-eye tester feedback on v1.0.0-rc.1** (parallel track). Remaining before `1.0.0` final:
+**Awaiting cold-eye tester feedback on v1.0.0-rc.1** (parallel track, unchanged). Remaining before `1.0.0` final:
 1. Tester feedback round (cold-eye review). No code commitments until feedback lands.
 2. After verification, bump `1.0.0-rc.1` → `1.0.0` in 4 places (`package.json`, `Cargo.toml`, `tauri.conf.json`, `version.ts`) + rebuild.
 
-**v1.1 priority queue (post-Phase-1):** Phase 2 (Pairs + RRG, zero new data) → CoinGecko fetcher → bull/bear VRVP split → true log mode (Path a) → M9 features (overlay + Ctrl+K palette) → code signing.
+**v1.1 priority queue (post-Phase-3-lean):** Macro Regime Quadrant → optional MACRO-tile retrofit for RecProb/FCI → Phase 4 (COT / AAII / VIX term — real new fetchers) → CoinGecko fetcher → bull/bear VRVP split → true log mode (Path a) → M9 features (overlay + Ctrl+K palette) → code signing.
 
 **Indicator naming note:** the quad-SMMA-state indicator was originally seeded as "Larsson Line" (trendscope's label). During S7 we renamed to **SMMA Ribbon** after confirming from the originator's own Medium post that the math is derivative of public community work, not his invention. Session logs below keep the original "Larsson" references as a historical record — code, DB seed, UI text, and `CLAUDE.md`/`DESIGN.md` use "SMMA Ribbon" going forward. See `memory/m6_indicator_rename.md`.
+
+### S17 — v1.1 Analysis Phase 2 + Phase 3 (lean) + TabIntro pattern (2026-04-30)
+
+Single-day arc covering two phases of v1.1 Analysis plus a cross-cutting UX retrofit. 5 commits across 2 feature branches; both fast-forwarded to master and deleted. End state: master at `d2e9a30`.
+
+**(1) Phase 2 design lock-in (4 open items resolved up front).**
+- **RRG math choice.** Spec mentioned "JdK normalization, 14-day default" — picked weekly sampling (last close per ISO week, Bloomberg convention), 14-week RS-Ratio lookback, 5-week RS-Momentum. Math: `RS = ticker/benchmark; RS_Ratio = 100 × RS / SMA(RS, 14w); RS_Momentum = 100 × RS_Ratio / SMA(RS_Ratio, 5w)`. Drift vs Bloomberg's proprietary z-score-of-z-score accepted — quadrant interpretation preserved, formula explainable.
+- **Pairs log/linear toggle.** Dropped — same S11 ECharts log-axis finding (default tick generation broken for sub-decade ranges, exactly where ratios live). Path (a) manual `log10()` transform tracked as a separate v1.1+ task for both Pairs and FeatureChart.
+- **Cross-tab navigation (Correlations cell → Pairs).** S15 Q1 locked the destination. Implementation: localStorage handoff key `session.analysis_pairs_handoff` + `analysis-set-active-tab` `CustomEvent`. PairsTab reads + clears handoff on mount; AnalysisLayout listens for the event and calls `setActiveId(detail)`. Cheap, no new abstraction. localStorage chosen over `usePersistedState` (which is SQLite-backed via session_cmds) because the handoff is ephemeral and must survive the tab swap (PairsTab unmounts/mounts as part of the dispatch).
+- **Pairs picker shape.** New `maxChips?: number` + `placeholder?: string` props on `TickerChipPicker`. `maxChips=1` clamps to single-select; the input + dropdown auto-hide once at the cap. Backwards-compatible (undefined = no cap).
+
+**(2) Phase 2 backend (commit `61a107b`).**
+- `analysis/pairs.rs` (~210 LOC) — `compute_pair_ratio` + `rolling_zscore` over aligned closes. Uses existing `align_close_prices`. Returns ratio series, z-score series, summary stats (current, μ, σ, min, max), excluded list. Sample stdev (n−1 denominator) per finance convention. NaN guard on zero/negative denominator.
+- `analysis/rrg.rs` (~290 LOC) — `compute_rrg` with `weekly_close_resample` (last close per ISO week via `(year, week)` BTreeMap key — `chrono::Datelike::iso_week()`), `rolling_sma`, `rolling_sma_skip_nan` (handles warm-up NaNs from chained passes). Inner-join on ISO week between ticker and benchmark; drops below `rs_period + momentum_period` joined weeks. Tail trimmed to last `tail_length` valid (RS-Ratio, RS-Momentum) pairs.
+- `analysis/registry.rs` — added `pairs_ratio` (cross_asset, default config_json with quick-picks) + `rrg` (cross_asset, default benchmark/periods/tail).
+- `db/seed.sql` — 2 new `analysis_tools` rows with same default configs.
+- `commands/analysis_cmds.rs` + `lib.rs` — `compute_pair_ratio` + `compute_rrg` IPC commands.
+- `analysis/tests.rs` — 7 new unit tests covering `rolling_zscore` (4: too-short, constant-window, basic-step, centered-zero), `weekly_close_resample` (1: takes-last-per-iso-week), `rolling_sma` (1: warmup-then-steady), `rolling_sma_skip_nan` (1: requires-n-finite). 17/17 total green.
+- `types/analysis.ts` — `PairsRequest/Response`, `PairsHandoff`, `RrgRequest/Response`, `RrgTail`, `RrgPoint`. camelCase.
+
+**(3) Phase 2 frontend (commit `7683c3f`).**
+- `PairsTab.tsx` — two single-pickers (chip-picker `maxChips=1`), lookback 90/180/365/730/1825d, z-window 20/60/90/120, ECharts dual-pane (ratio top + z-score bottom with ±2σ dashed markLines), quick-picks button row pulled from `analysis_tools.config_json`. Magnitude-scaled `formatRatio` for tooltips.
+- `RrgTab.tsx` — benchmark text input + Apply button (S15 Q3 — re-normalization too costly per-keystroke), ticker chip-picker, tail-length picker (4/8/12 wk), ECharts scatter with quadrant fills via `markArea` (TR green / BR amber / BL red / TL blue, all alpha 0.07), per-ticker tail with linear opacity gradient (0.2 oldest → 1.0 head), head dot with backed label, four `graphic` text quadrant labels (LEADING / WEAKENING / LAGGING / IMPROVING), ticker palette cycles 5 colors.
+- `CorrelationsTab.tsx` — non-diagonal cells now have `corr-matrix__cell--clickable` class + onClick that writes `session.analysis_pairs_handoff` to localStorage + dispatches `analysis-set-active-tab` event. Diagonal cells unchanged.
+- `AnalysisLayout.tsx` — listens for `analysis-set-active-tab` CustomEvent and calls `setActiveId(detail)`.
+- `TickerChipPicker.tsx` — `maxChips`/`placeholder` props.
+- `registry.ts` — adds `pairs_ratio: PairsTab`, `rrg: RrgTab`.
+- `app.css` — `.corr-matrix__cell--clickable` (cyan outline on hover), `.analysis-pairs__quickpicks/__quickpick`, `.analysis-rrg__benchmark-row/__benchmark-input/__apply`, `.tab-intro` and 8 sub-classes (added later in the TabIntro retrofit).
+
+**(4) Phase 2 smoke-test fix — chart-init zero-size bug.** First Phase 2 run (screenshots `Screenshot 2026-04-30 102436.png` + `102520.png`) showed footer-populated, chart-blank state on both Pairs and RRG. Both tabs hid the chart container with `style={{ display: data ? 'block' : 'none' }}` on first render — `echarts.init(container)` fired against a 0×0 div and cached that size; when data arrived and display flipped to `'block'`, ECharts never re-measured and rendered into nothing. Fix: drop the `display` toggle entirely; let the container be unconditionally laid out at `minHeight: 480/520`; loading + placeholder states sit above. Matches the YieldCurveTab pattern that worked. Captured as **EC-15** in LESSONS. Post-fix screenshot `103125.png` shows BTC-USD vs ^GSPC RRG with the full Improving → Lagging → Leading tail visible.
+
+**(5) TabIntro pattern (S17-new) + retrofit (commit `7683c3f`).** RRG smoke-test surfaced the gap directly: quadrant labels like "Leading" sound like trade recommendations, but no tab explained itself. The user flagged that this needs strategizing across all tabs, not just RRG.
+- **Three-layer pattern:** subtitle (always-visible, ~1 sentence, plain English) + collapsible "How to read this" (interpretation guide as `<ul>` + paragraph + standard liability close) + optional collapsible "The math" (formula reference for power users). Standard liability copy: *"Decision support, not investment advice. Patterns are descriptive, not predictive."*
+- `components/analysis/TabIntro.tsx` (~48 LOC) — props: `subtitle: string` + `howToRead: ReactNode` + `math?: ReactNode` + `liabilityNote?: string`. Native `<details>` for accessibility-by-default; custom caret `▸ → 90°-rotated on open`. Cyan left-border + faint surface — sits visually between controls and chart without competing.
+- Retrofit in same commit: Correlations, Yield Curve (Phase 1) + Pairs, RRG (Phase 2) all gain `<TabIntro>` between header controls and content area.
+- **Copy iteration.** Initial draft was technical ("Pearson correlation of log returns over the chosen lookback…"). User asked for a less-technical rewrite ("Math stays as-is. Provide implemented text, then re-written text so I can compare. No code yet."). Side-by-side comparison shipped in chat for all four tabs; user approved all rewrites; second edit pass swapped each `<TabIntro>` body to plain-language form. Math sections kept technical (purpose: power-user transparency).
+
+**(6) Design doc codification (commit `8760606`).** New "Tab presentation pattern (S17, 2026-04-30) — applies to ALL Analysis tabs" section in `.projects/02_v1_1_analysis/v11_analysis_design.md`, before "Risks". Documents the three-layer pattern, the standard liability copy, the component signature, the rule that Phase 3 + Phase 4 tools ship with `TabIntro` filled in (no merge to master without it), and the Phase 1 retrofit-alongside-Phase 2 note. Pattern is now a hard requirement, not a soft preference.
+
+**(7) Phase 2 commit/merge.** Three commits on `feature/v1.1-analysis-phase-2`:
+- `61a107b` feat(analysis): Phase 2 backend — Pairs + RRG compute, IPC, registry, math tests
+- `7683c3f` feat(analysis): Phase 2 frontend — PairsTab, RrgTab, cell-click cross-link, TabIntro retrofit
+- `8760606` docs(analysis): codify TabIntro pattern + Phase 2 smoke-test screenshots
+
+Fast-forward merge to master; branch deleted.
+
+**(8) Phase 3 scope decision (mid-session).** User asked about continuing into Phase 3. Three open items flagged before commit: (a) NAPM vs INDPRO for the Regime Quadrant growth axis (NAPM = forward-looking but FRED data has gaps; INDPRO = clean monthly history but backward-looking), (b) S15 Q4 "MACRO tile AND Analysis tab" — leaner path is Analysis-only first, (c) RECPROUSM156N data freshness (NY Fed has paused publication in past periods; FRED website blocks WebFetch so couldn't verify mid-session). User chose **option B** — ship just Recession Prob + FCI this session, defer Regime Quadrant. Recession Prob built with graceful empty-state handling (placeholder text + FRED link) in case the series turns out to be stale.
+
+**(9) Phase 3 backend (commit `1d29223`).** Lean path — 2 simpler tools, no shared compute logic.
+- `analysis/recession_prob.rs` (~80 LOC) — pulls `RECPROUSM156N` via `db.all_fred_observations`, returns points (`Vec<MacroPoint>`) + `RecessionThresholds { warn_pct: 30.0, imminent_pct: 50.0 }` + current value + units + observation count. Single-FRED-series passthrough; no derivable math, no unit tests.
+- `analysis/financial_conditions.rs` (~90 LOC) — pulls `NFCI` similarly, returns points + current + min/max range + units + observation count. Same shape.
+- `analysis/mod.rs` — shared `MacroPoint { date: NaiveDate, value: f64 }` type for both single-FRED-series tools. Inline-defined rather than per-module to avoid duplication.
+- `analysis/registry.rs` — register `recession_prob` (display_order 5) + `financial_conditions` (display_order 6), both `scope: "macro"`, no default config.
+- `db/seed.sql` — `RECPROUSM156N` (Percent, Monthly, category=Recession) + `NFCI` (Index, Weekly, category=Conditions) added to `fred_series` block; both flipped to `tile_visible=0` in the existing UPDATE. 2 new `analysis_tools` rows.
+- `commands/analysis_cmds.rs` + `lib.rs` — `compute_recession_prob` + `compute_financial_conditions` IPC commands.
+- `types/analysis.ts` — `MacroPoint`, `RecessionProbRequest/Response`, `RecessionThresholds`, `FinancialConditionsRequest/Response`. Empty-object request types via `Record<string, never>`.
+
+**(10) Phase 3 frontend (commit `d2e9a30`).** Both tabs are simple ECharts line + NBER bars + TabIntro.
+- `RecessionProbTab.tsx` (~255 LOC) — single line plot with `markLine` at 30% (amber dashed) + 50% (red dashed) + NBER `markArea` overlay. Empty-state placeholder includes external FRED link to verify series status. Footer surfaces current value + date + observation count + series id. Cyan accent fill matches existing chart aesthetic.
+- `FinancialConditionsTab.tsx` (~250 LOC) — single line + zero baseline `markLine` labeled "long-run avg" + NBER overlay. Footer adds full-series min/max range. **Note:** initial draft used ECharts `visualMap` with two `pieces` to color the line amber-above-zero and cyan-below — caused immediate webview crash on first click. Crash was deterministic and reproducible. Suspect: `visualMap.pieces` + 35-segment `markArea` + 2,800-point weekly series hit a pathological ECharts render path. Stripped the `visualMap`; single accent-cyan line + zero baseline carries the narrative through the description and zero crossings. Captured as **EC-14** in LESSONS. TabIntro copy adjusted accordingly ("Above the solid zero line" / "Below the zero line", removed amber/cyan-color references).
+- `registry.ts` — adds both tabs.
+
+**(11) Phase 3 commit/merge.** Two commits on `feature/v1.1-analysis-phase-3`:
+- `1d29223` feat(analysis): Phase 3 backend (lean) — Recession Prob + FCI compute, IPC, FRED seed
+- `d2e9a30` feat(analysis): Phase 3 frontend — RecessionProbTab + FinancialConditionsTab
+
+Fast-forward merge; branch deleted. User confirmed both tabs render correctly: "both work great - smoke tests passed."
+
+**Course corrections in-session.**
+- **Display:none chart-init.** Hiding the ECharts container on first render with a conditional `display` style = caches 0×0 at init. Caught by smoke-test, fixed by always-visible container + placeholder-above pattern. EC-15.
+- **visualMap + long-series + multi-segment markArea.** ECharts pathological path → webview crash. Caught by smoke-test on first FCI click. Fixed by stripping visualMap. EC-14.
+- **TabIntro copy register.** First draft was quant-jargon-heavy; user explicitly asked for plain-language version. Pattern: side-by-side comparison in chat before code edit, especially for user-facing prose. Cheap to do, prevents wasted PR-style cycles.
+- **FRED bot-blocking on WebFetch.** `fred.stlouisfed.org` returns 403 on Claude Code's WebFetch (both page and CSV endpoints). Pragmatic posture: ship with graceful empty-state handling instead of trying to verify mid-session. Empty-state UI explains and links out so the user can verify themselves.
+- **Recursive ECharts overlap risks.** Both EC-14 and EC-15 surfaced from "natural" ECharts patterns that don't error, just silently misbehave or crash. New rule of thumb: smoke-test every new tab in the actual webview before committing — `npm run build` + `tsc` doesn't catch render-time issues.
+
+**Discussions parked / scope deferred.**
+- **Macro Regime Quadrant.** 4-quadrant scatter (growth × inflation, 24-month trail). Held pending the NAPM-vs-INDPRO decision and a fresh look at MACRO-tile coupling. Reuses RRG's tail-rendering pattern when it lands.
+- **MACRO-tile retrofit for RecProb + FCI** (S15 Q4 "both surfaces" intent). Both tools currently Analysis-only. If a `<MacroSeriesView mode="tile" | "chart">` shared component lands in the future, it makes the tile addition cheap.
+- **`RECPROUSM156N` upstream verification.** Couldn't WebFetch FRED mid-session (403). Tab ships with empty-state placeholder + external link; user will see the latest observation date in the footer and can swap to `USRECP` if needed.
+- **Bulk-add modal on TickerChipPicker** (carry-over from S16 — still deferred).
+
+**Build artifacts.**
+- 5 commits this session (3 Phase 2 + 2 Phase 3), all fast-forwarded to master:
+  - `61a107b` Phase 2 backend
+  - `7683c3f` Phase 2 frontend (incl. TabIntro retrofit)
+  - `8760606` TabIntro pattern docs + Phase 2 smoke screenshots
+  - `1d29223` Phase 3 backend (lean)
+  - `d2e9a30` Phase 3 frontend
+- Net additions: ~3,070 lines / 33 files. 17/17 analysis math tests green. `tsc --noEmit` clean. `npm run build` 3.84s, 663 modules.
+- Screenshots committed: `Screenshot 2026-04-30 102436.png` (Pairs pre-fix, chart blank), `102520.png` (RRG pre-fix, chart blank), `103125.png` (RRG post-fix, BTC-USD tail rendering correctly).
+
+**Next session entry point.**
+- **If continuing v1.1:** Macro Regime Quadrant. Decide growth-axis (suggested INDPRO YoY for data hygiene; NAPM toggle as v1.2 escalation). Decide whether RecProb + FCI MACRO tiles land alongside (recommended: shared `<MacroSeriesView>` component). Add 1-3 FRED series to seed; new `analysis/regime_quadrant.rs` reusing RRG's tail-rendering pattern; `RegimeQuadrantTab.tsx` with TabIntro per the now-mandatory pattern.
+- **If RC1 feedback lands:** triage bugs/polish/discoverability/v1.1; fix in-scope items; bump 4 files `1.0.0-rc.1` → `1.0.0`; rebuild; ship final.
+
+---
 
 ### S16 — Git init + repo reorganization + PROGRESS prune + v1.1 Analysis Phase 1 (2026-04-29)
 
@@ -217,7 +313,16 @@ Sessions S1–S13 — the entire v1.0 build arc from project inception through t
 - Future indicators (post-v1) — MACD, Bollinger Bands, Ichimoku, Volume Profile, candlestick patterns. All plug into the same trait.
 - v1.1 feature candidates (from brainstorm): seasonality heatmap, correlation heatmap, yield curve viz, earnings/economic calendar, backtesting module
 - Backtesting module (trendscope's own "Discovered" gap — "we've never measured whether flips are profitable")
-- **v1.1 Analysis section design sketch** (`.projects/02_v1_1_analysis/v11_analysis_design.md`, S14) — 4-phase plan for cross-asset analysis tools. **Phase 1 (Correlations + Yield Curve) shipped on master 2026-04-29 (S16).** Phase 2 (Pairs + RRG) next; Phase 3 (regime quadrant + recession prob + FCI) and Phase 4 (COT + AAII + VIX term) follow.
+- **v1.1 Analysis section design sketch** (`.projects/02_v1_1_analysis/v11_analysis_design.md`, S14) — 4-phase plan for cross-asset analysis tools. **Phase 1 (Correlations + Yield Curve) shipped 2026-04-29 (S16). Phase 2 (Pairs + RRG) shipped 2026-04-30 (S17). Phase 3 lean (Recession Prob + FCI) shipped 2026-04-30 (S17).** Phase 3 remaining: Macro Regime Quadrant. Phase 4 (COT + AAII + VIX term — real new fetchers) follows.
+
+### Deferred from v1.1 Phase 2 + Phase 3 lean (2026-04-30, S17)
+- **Macro Regime Quadrant** — Phase 3 remaining tool (4-quadrant scatter, growth × inflation, 24-month trail with current head). Held pending two open decisions: (a) NAPM vs INDPRO YoY for the growth axis (NAPM = forward-looking but FRED publication has gaps; INDPRO = clean monthly but backward-looking — recommended INDPRO), (b) whether the existing Recession Prob + FCI tabs gain MACRO-tile twins via a shared `<MacroSeriesView mode="tile" \| "chart">` component (S15 Q4 spec'd "both surfaces"; lean path shipped Analysis-only). Reuses RRG's tail-rendering pattern when it lands.
+- **MACRO-tile retrofit for Recession Prob + FCI.** S15 Q4 locked "both MACRO tile AND Analysis tab"; lean Phase 3 path shipped Analysis-only. Add when there's clear daily-glance value, ideally alongside the Macro Regime Quadrant build so the shared view component lands once.
+- **`RECPROUSM156N` upstream verification.** FRED's website 403'd Claude Code's WebFetch mid-session, so the series' current publication status couldn't be confirmed before commit. Tab ships with empty-state placeholder + external FRED link. If the user's smoke-test post-MACRO-refresh shows zero observations, swap to `USRECP` or another alternative in a follow-up commit.
+- **Path (a) manual `log10()` transform** (carry-over from S11) — for Pairs ratio chart AND FeatureChart price pane. ECharts default log axis is broken on sub-decade ranges (which is exactly where ratios live), so Pairs shipped without a log toggle. Pays for both surfaces at once when prioritized; ~2-3 hours.
+- **NAPM toggle for the Regime Quadrant** — once Regime Quadrant ships with INDPRO YoY, a v1.2 toggle to switch to NAPM/PMI for the growth axis would catch users who want the financial-media narrative match. Watch for FRED's NAPM publication gaps before implementing.
+- **`list_recession_segments` cross-consumer test** (carry-over from S16) — hook is wired with module-level cache + Promise dedup. Phase 3 added two more consumers (`RecessionProbTab`, `FinancialConditionsTab`) on top of `YieldCurveTab` from Phase 1. Verify in DevTools that all three share a single fetch.
+- **Bulk-add modal on TickerChipPicker** (still deferred from S16) — S15 Q2 spec'd "chip picker with autocomplete + modal for bulk"; chip + autocomplete shipped Phase 1, single-pickers via `maxChips=1` shipped Phase 2. Bulk modal still pending. Extension point clear.
 
 ### Deferred from v1.1 Phase 1 (2026-04-29, S16)
 - **Bulk-modal ticker selection on TickerChipPicker.** S15 Q2 spec'd "chip picker with autocomplete + modal for bulk"; shipped chip + autocomplete only. Add a `+ Bulk` button on the picker that opens a checklist-modal grouped by sector_group when feedback shows users want to add 5+ tickers at once. Extension point clear in `TickerChipPicker.tsx`.
