@@ -1,6 +1,8 @@
 import type { ComponentType } from 'react';
 import { CorrelationsTab } from './CorrelationsTab';
+import { FinancialConditionsTab } from './FinancialConditionsTab';
 import { PairsTab } from './PairsTab';
+import { RecessionProbTab } from './RecessionProbTab';
 import { RrgTab } from './RrgTab';
 import { YieldCurveTab } from './YieldCurveTab';
 
@@ -13,4 +15,6 @@ export const ANALYSIS_TAB_REGISTRY: Record<string, ComponentType> = {
   yield_curve: YieldCurveTab,
   pairs_ratio: PairsTab,
   rrg: RrgTab,
+  recession_prob: RecessionProbTab,
+  financial_conditions: FinancialConditionsTab,
 };
