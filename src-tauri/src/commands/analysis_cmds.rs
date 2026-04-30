@@ -16,7 +16,9 @@ use crate::analysis::{
     correlations::{self, CorrelationsRequest, CorrelationsResponse},
     coverage::{self, TickerCoverage},
     macro_overlays::{self, RecessionSegment},
+    pairs::{self, PairsRequest, PairsResponse},
     registry::{AnalysisToolInfo, ANALYSIS_TOOLS},
+    rrg::{self, RrgRequest, RrgResponse},
     yield_curve::{self, YieldCurveRequest, YieldCurveResponse},
 };
 use crate::AppState;
@@ -95,4 +97,22 @@ pub fn list_tickers_with_coverage(
 ) -> Result<Vec<TickerCoverage>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     coverage::list_tickers_with_coverage(&db)
+}
+
+#[tauri::command]
+pub fn compute_pair_ratio(
+    request: PairsRequest,
+    state: State<'_, AppState>,
+) -> Result<PairsResponse, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    pairs::compute_pair_ratio(&db, request)
+}
+
+#[tauri::command]
+pub fn compute_rrg(
+    request: RrgRequest,
+    state: State<'_, AppState>,
+) -> Result<RrgResponse, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    rrg::compute_rrg(&db, request)
 }

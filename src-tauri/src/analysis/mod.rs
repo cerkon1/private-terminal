@@ -13,7 +13,9 @@ pub mod align;
 pub mod correlations;
 pub mod coverage;
 pub mod macro_overlays;
+pub mod pairs;
 pub mod registry;
+pub mod rrg;
 pub mod yield_curve;
 
 #[cfg(test)]

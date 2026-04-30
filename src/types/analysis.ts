@@ -96,3 +96,80 @@ export type RecessionSegment = {
   start: string;
   end: string;
 };
+
+// ────── Pairs / Ratio (Phase 2) ──────
+
+export type PairsRequest = {
+  numerator: TickerKey;
+  denominator: TickerKey;
+  lookbackDays: number;
+  zScoreWindow: number;
+};
+
+export type PairsPoint = {
+  date: string;
+  ratio: number;
+  /** Null until the rolling window has filled. */
+  zScore: number | null;
+};
+
+export type PairsStats = {
+  currentRatio: number | null;
+  currentZ: number | null;
+  mean: number | null;
+  stdev: number | null;
+  min: number | null;
+  max: number | null;
+};
+
+export type PairsResponse = {
+  numerator: TickerKey;
+  denominator: TickerKey;
+  lookbackDaysRequested: number;
+  zScoreWindow: number;
+  barCount: number;
+  startDate: string | null;
+  endDate: string | null;
+  points: PairsPoint[];
+  stats: PairsStats;
+  excluded: ExcludedTicker[];
+};
+
+/** Pre-loaded pair coming from a Correlations cell click — read once then
+ *  cleared by the consumer (see PairsTab). */
+export type PairsHandoff = {
+  numerator: TickerKey;
+  denominator: TickerKey;
+};
+
+// ────── RRG (Phase 2) ──────
+
+export type RrgRequest = {
+  benchmark: TickerKey;
+  tickers: TickerKey[];
+  rsPeriod: number;
+  momentumPeriod: number;
+  tailLength: number;
+};
+
+export type RrgPoint = {
+  date: string;
+  rsRatio: number;
+  rsMomentum: number;
+};
+
+export type RrgTail = {
+  ticker: TickerKey;
+  /** Chronological; last entry is the current head dot. */
+  points: RrgPoint[];
+};
+
+export type RrgResponse = {
+  benchmark: TickerKey;
+  rsPeriod: number;
+  momentumPeriod: number;
+  tailLength: number;
+  tails: RrgTail[];
+  excluded: ExcludedTicker[];
+  weeklyBars: number;
+};

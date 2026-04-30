@@ -230,4 +230,6 @@ UPDATE fred_series SET tile_visible = 0 WHERE series_id IN ('USREC', 'DGS3MO', '
 -- Phase 2/3/4 tools land via additional INSERT OR IGNORE rows; never re-key existing ids.
 INSERT OR IGNORE INTO analysis_tools (id, display_name, scope, display_order, enabled, config_json) VALUES
   ('correlation_matrix', 'Correlations', 'cross_asset', 1, 1, NULL),
-  ('yield_curve',        'Yield Curve',  'macro',       2, 1, NULL);
+  ('yield_curve',        'Yield Curve',  'macro',       2, 1, NULL),
+  ('pairs_ratio',        'Pairs',        'cross_asset', 3, 1, '{"quickPicks":[["BTC-USD","ETH-USD"],["GC=F","SI=F"],["HG=F","GC=F"],["^IXIC","^GSPC"]]}'),
+  ('rrg',                'RRG',          'cross_asset', 4, 1, '{"benchmark":"^GSPC","rsPeriod":14,"momentumPeriod":5,"tailLength":8}');

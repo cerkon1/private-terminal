@@ -32,6 +32,28 @@ pub const ANALYSIS_TOOLS: &[AnalysisToolMeta] = &[
         display_order: 2,
         default_config_json: None,
     },
+    AnalysisToolMeta {
+        id: "pairs_ratio",
+        display_name: "Pairs",
+        scope: "cross_asset",
+        display_order: 3,
+        // Quick-pick pairs for the toolbar. User-editable through the
+        // analysis_tools.config_json column once a UI for it lands.
+        default_config_json: Some(
+            r#"{"quickPicks":[["BTC-USD","ETH-USD"],["GC=F","SI=F"],["HG=F","GC=F"],["^IXIC","^GSPC"]]}"#,
+        ),
+    },
+    AnalysisToolMeta {
+        id: "rrg",
+        display_name: "RRG",
+        scope: "cross_asset",
+        display_order: 4,
+        // Default benchmark + RS/momentum periods + tail length. Benchmark
+        // is per-session (S15 Q3) so this is just the bootstrap default.
+        default_config_json: Some(
+            r#"{"benchmark":"^GSPC","rsPeriod":14,"momentumPeriod":5,"tailLength":8}"#,
+        ),
+    },
 ];
 
 /// IPC shape returned by `list_analysis_tools` — registry meta merged with
