@@ -1929,6 +1929,110 @@ html, body, #root {
   color: var(--accent-amber);
 }
 
+/* Shared intro block at the top of every Analysis tab (S17).
+ * Subtitle stays always-on; "How to read this" + "The math" are progressive
+ * disclosures via native <details>. See components/analysis/TabIntro.tsx. */
+
+.tab-intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(var(--bg-surface-rgb), 0.5);
+  border-left: 2px solid rgba(var(--accent-cyan-rgb), 0.5);
+}
+
+.tab-intro__subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+.tab-intro__disclosures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.tab-intro__disclosure {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+.tab-intro__summary {
+  color: var(--accent-cyan);
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  list-style: none;
+  user-select: none;
+}
+
+.tab-intro__summary::-webkit-details-marker {
+  display: none;
+}
+
+.tab-intro__summary::before {
+  content: '▸';
+  display: inline-block;
+  width: 1em;
+  color: var(--text-tertiary);
+  transition: transform 120ms ease;
+}
+
+.tab-intro__disclosure[open] > .tab-intro__summary::before {
+  transform: rotate(90deg);
+}
+
+.tab-intro__body {
+  margin-top: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: var(--fs-xs);
+  line-height: 1.55;
+  max-width: 720px;
+}
+
+.tab-intro__body p {
+  margin: 0 0 var(--space-xs) 0;
+}
+
+.tab-intro__body p:last-child {
+  margin-bottom: 0;
+}
+
+.tab-intro__body ul {
+  margin: 0 0 var(--space-xs) 0;
+  padding-left: var(--space-lg);
+}
+
+.tab-intro__body li {
+  margin-bottom: 2px;
+}
+
+.tab-intro__body--math {
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+}
+
+.tab-intro__body--math code {
+  background: var(--bg-surface);
+  padding: 1px 4px;
+  border: 1px solid var(--border-subtle);
+}
+
+.tab-intro__liability {
+  margin-top: var(--space-sm) !important;
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
 /* Chip-based ticker picker (Q2 + Q6) */
 
 .chip-picker {
@@ -2128,4 +2232,73 @@ html, body, #root {
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
   min-width: 56px;
+}
+
+.corr-matrix__cell--clickable {
+  cursor: pointer;
+}
+
+.corr-matrix__cell--clickable:hover {
+  outline: 1px solid rgba(var(--accent-cyan-rgb), 0.7);
+  outline-offset: -1px;
+}
+
+/* Pairs tab — quick-pick buttons row */
+
+.analysis-pairs__quickpicks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.analysis-pairs__quickpick {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  padding: 2px var(--space-sm);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+
+.analysis-pairs__quickpick:hover {
+  border-color: rgba(var(--accent-cyan-rgb), 0.6);
+  color: var(--text-primary);
+}
+
+/* RRG benchmark input + Apply button (S15 Q3) */
+
+.analysis-rrg__benchmark-row {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.analysis-rrg__benchmark-input {
+  width: 88px;
+  text-transform: uppercase;
+}
+
+.analysis-rrg__apply {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid rgba(var(--accent-cyan-rgb), 0.5);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: var(--space-xs) var(--space-sm);
+  cursor: pointer;
+}
+
+.analysis-rrg__apply:hover:not(:disabled) {
+  background: rgba(var(--accent-cyan-rgb), 0.12);
+}
+
+.analysis-rrg__apply:disabled {
+  color: var(--text-tertiary);
+  border-color: var(--border-subtle);
+  cursor: default;
 }

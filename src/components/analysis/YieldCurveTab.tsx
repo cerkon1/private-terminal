@@ -5,6 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { useRecessionBars } from '../../hooks/useRecessionBars';
 import { getChartTheme } from '../../styles/chartTheme';
+import { TabIntro } from './TabIntro';
 import type {
   YieldCurveRequest,
   YieldCurveResponse,
@@ -249,6 +250,65 @@ export function YieldCurveTab() {
           </div>
         )}
       </header>
+
+      <TabIntro
+        subtitle="What the US government pays to borrow money for different lengths of time, today vs. 6 months ago vs. 5 years ago. Below: the gap between long- and short-term rates over time, with US recessions shaded gray."
+        howToRead={
+          <>
+            <ul>
+              <li>
+                <strong>Top chart:</strong> each line is a snapshot of yields by loan
+                length, from 3 months out to 30 years. Normally the line rises
+                left-to-right — investors demand more interest to lend their money for
+                longer. A flat or downward-sloping line is unusual and historically signals
+                trouble ahead.
+              </li>
+              <li>
+                <strong>Bottom chart:</strong> the difference between the 10-year yield and
+                a shorter yield, plotted over time. Above zero = normal. Below zero =
+                short-term rates are <em>higher</em> than long-term rates — known as an
+                "inverted yield curve."
+              </li>
+              <li>
+                <strong>Gray bands:</strong> official US recession periods, dated by the
+                National Bureau of Economic Research.
+              </li>
+              <li>
+                <strong>Why people watch this:</strong> the 10y/2y gap typically turns
+                negative <em>6–18 months before</em> a recession starts. The flip itself is
+                the warning — by the time the recession lands, the curve has often already
+                un-inverted.
+              </li>
+              <li>
+                The trailing edge of the most recent gray bar can shift later, because
+                recessions are officially dated 6–18 months <em>after</em> they end.
+              </li>
+            </ul>
+            <p>
+              The signal isn't perfect — the link between curve shape and recessions can
+              change in unusual rate environments (e.g. when central banks hold short rates
+              near zero for years).
+            </p>
+          </>
+        }
+        math={
+          <>
+            <p>
+              Raw FRED yields (<code>DGS3MO / DGS2 / DGS5 / DGS10 / DGS30</code>) plotted
+              directly — no smoothing.
+            </p>
+            <p>
+              Spread series = <code>DGS10 − DGS2</code> (or <code>DGS10 − DGS3MO</code>) per
+              business day, inner-joined on dates where both series have non-sentinel
+              observations.
+            </p>
+            <p>
+              Recession bars: USREC FRED series (monthly 0/1), run-length-encoded into
+              start/end ranges.
+            </p>
+          </>
+        }
+      />
 
       {loading && !data && (
         <div className="analysis-tab__status">Loading yield curve…</div>

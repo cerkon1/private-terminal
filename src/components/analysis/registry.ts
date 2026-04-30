@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react';
 import { CorrelationsTab } from './CorrelationsTab';
+import { PairsTab } from './PairsTab';
+import { RrgTab } from './RrgTab';
 import { YieldCurveTab } from './YieldCurveTab';
 
 /// Maps the analysis_tools.id from the registry to its tab component.
@@ -9,4 +11,6 @@ import { YieldCurveTab } from './YieldCurveTab';
 export const ANALYSIS_TAB_REGISTRY: Record<string, ComponentType> = {
   correlation_matrix: CorrelationsTab,
   yield_curve: YieldCurveTab,
+  pairs_ratio: PairsTab,
+  rrg: RrgTab,
 };

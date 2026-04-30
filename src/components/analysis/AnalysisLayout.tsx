@@ -54,6 +54,18 @@ export function AnalysisLayout() {
     }
   }, [visibleTools, activeId, setActiveId]);
 
+  // Cross-tab navigation: a tab can request a switch by dispatching
+  // `analysis-set-active-tab` with detail = target tabId. Used by the
+  // Correlations cell-click → Pairs handoff (S15 Q1).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (typeof detail === 'string') setActiveId(detail);
+    };
+    window.addEventListener('analysis-set-active-tab', handler);
+    return () => window.removeEventListener('analysis-set-active-tab', handler);
+  }, [setActiveId]);
+
   const ActiveComponent = ANALYSIS_TAB_REGISTRY[activeId];
 
   return (

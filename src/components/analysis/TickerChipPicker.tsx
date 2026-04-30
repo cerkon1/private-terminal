@@ -8,6 +8,12 @@ type Props = {
   /** Tickers with bar_count strictly below this render greyed and carry a
    *  bar-count tooltip. Pass 0 to disable greying. */
   minBarsRequired: number;
+  /** Maximum chip count. When `selected.length >= maxChips` the input + dropdown
+   *  hide; user must remove a chip to add another. Undefined = no cap. */
+  maxChips?: number;
+  /** Optional placeholder shown when no chips are selected. Defaults to
+   *  "add ticker…". */
+  placeholder?: string;
 };
 
 /// Chip-based multi-select for analysis tickers. Autocomplete via prefix
@@ -17,7 +23,13 @@ type Props = {
 /// State scope: chip selection is owned by the parent (typically a
 /// CorrelationsTab) so it can be persisted under session.* keys per Q8.B.
 /// This component is stateless w.r.t. the selection itself.
-export function TickerChipPicker({ selected, onChange, minBarsRequired }: Props) {
+export function TickerChipPicker({
+  selected,
+  onChange,
+  minBarsRequired,
+  maxChips,
+  placeholder,
+}: Props) {
   const [available, setAvailable] = useState<TickerCoverage[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,11 +137,14 @@ export function TickerChipPicker({ selected, onChange, minBarsRequired }: Props)
             </span>
           );
         })}
+        {(maxChips === undefined || selected.length < maxChips) && (
         <div className="chip-picker__input-wrap">
           <input
             type="text"
             className="chip-picker__input"
-            placeholder={selected.length === 0 ? 'add ticker…' : '+'}
+            placeholder={
+              selected.length === 0 ? (placeholder ?? 'add ticker…') : '+'
+            }
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -170,6 +185,7 @@ export function TickerChipPicker({ selected, onChange, minBarsRequired }: Props)
             </ul>
           )}
         </div>
+        )}
       </div>
       {error && <div className="chip-picker__error">{error}</div>}
     </div>
