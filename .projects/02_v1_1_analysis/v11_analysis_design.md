@@ -446,6 +446,62 @@ Each step compiles + passes its build gate before the next starts.
 
 ---
 
+## Tab presentation pattern (S17, 2026-04-30) — applies to ALL Analysis tabs
+
+Every analysis tab MUST render a `<TabIntro>` component at the top of its
+content area, immediately below the controls and before any data placeholder
+or chart. The pattern was established after Phase 2 ship when smoke-testing
+RRG exposed the gap — quadrant labels like "Leading" sound like trade
+recommendations, and a user landing cold has no way in without context.
+
+**Three progressively-disclosed layers:**
+
+1. **Subtitle** — one sentence, always visible. What the chart shows in plain
+   English, no jargon. Example for Correlations: *"Pearson correlation of log
+   returns over the chosen lookback — strongly positive cells move together,
+   near zero are independent, strongly negative move opposite."*
+
+2. **"How to read this"** — collapsible (`<details>`), default-closed. The
+   interpretation guide. Bullet list of how to read the visual elements + a
+   short paragraph on context-sensitivity (e.g. "correlations shift across
+   regimes"). Always closes with the standard liability framing line.
+
+3. **"The math"** — collapsible, default-closed, optional but recommended.
+   Three to five lines of formulas in monospace. Power-user transparency
+   without cluttering the default view.
+
+**Standard liability framing** (default in `TabIntro`, override only with reason):
+> *Decision support, not investment advice. Patterns are descriptive, not predictive.*
+
+**Component signature:**
+
+```tsx
+<TabIntro
+  subtitle="One-sentence what-this-shows."
+  howToRead={<>{ /* <ul>/<p> describing how to interpret */ }</>}
+  math={<>{ /* optional — formulas in <code> */ }</>}
+  liabilityNote="..." // optional override
+/>
+```
+
+**Rule for Phase 3 + Phase 4 + future tools:** ship with `TabIntro` filled in.
+A tool without an intro block is incomplete and shouldn't merge to `master`.
+Subtitle copy lives in the component body (not localized — single-user app,
+English only). Math copy uses `<code>` for symbol-level formulas; multi-line
+expressions stay in a single `<code>` per equation.
+
+**Style hooks:** `tab-intro` / `tab-intro__subtitle` / `tab-intro__disclosure` /
+`tab-intro__summary` / `tab-intro__body` / `tab-intro__body--math` /
+`tab-intro__liability` in `app.css`. Cyan left-border + faint surface — sits
+visually between the controls and the chart without competing.
+
+**Phase 1 retrofit (S17):** Correlations + Yield Curve received the same
+`TabIntro` pass at the same time as Phase 2 (Pairs + RRG) so the section is
+uniform from the user's perspective. No tab without an intro shipped to
+`master`.
+
+---
+
 ## Risks / what could go wrong
 
 - **Scope creep from "while we're here" thinking.** Once Analysis exists, every "wouldn't it be cool if…" idea pulls toward it. The phase plan exists to gate that — Phase 1 must ship and prove the registry pattern before Phase 2 starts.
