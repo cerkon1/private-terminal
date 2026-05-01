@@ -1,17 +1,84 @@
 # Progress Log — Private Terminal
 
 ## Current Focus
-**v1.1 Analysis section Phase 2 + Phase 3 (lean) shipped on master (2026-04-30, S17).** Master at `d2e9a30`. Six Analysis tabs live: Correlations · Yield Curve · Pairs · RRG · Recession Prob · Financial Conditions. Phase 2 added Pairs (ratio + rolling z-score) + RRG (JdK rotation, weekly resample, four-quadrant scatter with tails); Phase 3 lean added Recession Prob (`RECPROUSM156N` line + 30/50% threshold lines + NBER bars) + FCI (`NFCI` line + zero baseline + NBER bars). All four new tabs ship with `<TabIntro>` per the new S17-codified pattern (subtitle + collapsible "How to read this" + collapsible "The math" + standard liability footer); Phase 1's two existing tabs were retrofitted same session. 17/17 analysis math tests green.
+**v1.1 Analysis section Phase 3 fully shipped on master (2026-05-02, S18).** Master at `d471633`. Seven Analysis tabs live: Correlations · Yield Curve · Pairs · RRG · Recession Prob · Financial Conditions · Regime Quadrant. The last Phase 3 tool (Macro Regime Quadrant) ships with INDPRO YoY (growth axis) × CPI YoY default + Core PCE toggle (inflation axis), 12/24/36/48-month trail picker, four-quadrant scatter with crosshairs anchored at long-run baselines, and the standard `<TabIntro>` pattern. Zero new FRED series — INDPRO + CPIAUCSL + PCEPILFE were already seeded since M2. 20/20 analysis math tests green (was 17/17 — three new YoY helper tests).
 
-**Phase 3 deferred:** Macro Regime Quadrant (4-quadrant scatter, growth × inflation trail) — held pending NAPM-vs-INDPRO growth-axis decision and the MACRO-tile-or-not call for Recession Prob + FCI (S15 Q4 spec'd "both surfaces" but lean path shipped Analysis-only). Both are clean follow-ups.
+**Phase 3 still-deferred:** MACRO-tile retrofit for Recession Prob + FCI (S15 Q4 spec'd "both surfaces"; lean path shipped Analysis-only). A shared `<MacroSeriesView mode="tile" | "chart">` component would land the tile twins cheaply; not blocking.
 
 **Awaiting cold-eye tester feedback on v1.0.0-rc.1** (parallel track, unchanged). Remaining before `1.0.0` final:
 1. Tester feedback round (cold-eye review). No code commitments until feedback lands.
 2. After verification, bump `1.0.0-rc.1` → `1.0.0` in 4 places (`package.json`, `Cargo.toml`, `tauri.conf.json`, `version.ts`) + rebuild.
 
-**v1.1 priority queue (post-Phase-3-lean):** Macro Regime Quadrant → optional MACRO-tile retrofit for RecProb/FCI → Phase 4 (COT / AAII / VIX term — real new fetchers) → CoinGecko fetcher → bull/bear VRVP split → true log mode (Path a) → M9 features (overlay + Ctrl+K palette) → code signing.
+**v1.1 priority queue (post-Phase-3-complete):** optional MACRO-tile retrofit for RecProb/FCI (shared `<MacroSeriesView>`) → Phase 4 (COT / AAII / VIX term — real new fetchers) → CoinGecko fetcher → bull/bear VRVP split → true log mode (Path a) → M9 features (overlay + Ctrl+K palette) → code signing.
 
 **Indicator naming note:** the quad-SMMA-state indicator was originally seeded as "Larsson Line" (trendscope's label). During S7 we renamed to **SMMA Ribbon** after confirming from the originator's own Medium post that the math is derivative of public community work, not his invention. Session logs below keep the original "Larsson" references as a historical record — code, DB seed, UI text, and `CLAUDE.md`/`DESIGN.md` use "SMMA Ribbon" going forward. See `memory/m6_indicator_rename.md`.
+
+### S18 — v1.1 Analysis Phase 3 finish: Macro Regime Quadrant (2026-05-02)
+
+Single-tool session closing out Phase 3. Two commits on `feature/v1.1-regime-quadrant`, fast-forwarded to master at `d471633`. Zero new FRED series.
+
+**(1) Pre-build decisions locked.** Four open items resolved up front before any code:
+- **Growth axis: INDPRO YoY (vs NAPM).** INDPRO has clean continuous monthly history; NAPM publication has historical gaps. NAPM toggle deferred to v1.2.
+- **Inflation axis: CPI YoY default with Core PCE toggle.** Both already seeded — `CPIAUCSL` (headline) and `PCEPILFE` (Core PCE — what the Fed actually targets). Per-request dropdown.
+- **Scope: Option α (Quadrant only).** Skipped the shared `<MacroSeriesView>` retrofit for Recession Prob + FCI MACRO tiles — that's a separate session if/when it lands. Phase 3 lean → Phase 3 complete in this session, no extra abstraction.
+- **Trail: 24mo default with 12/24/36/48 picker.** Configurable; the 48-month view shows the full COVID-era inflation spike trailing through Stagflation back to current readings.
+
+**(2) Backend — `analysis/regime_quadrant.rs` (commit `613e3f3`, ~210 LOC).**
+- `compute_regime_quadrant(req)` pulls `INDPRO` + (`CPIAUCSL` or `PCEPILFE` per `inflation_proxy`) via existing `db.all_fred_observations`. Both monthly index series.
+- Shared `yoy_pct_change(points, months)` helper added to `analysis/mod.rs` alongside new `RegimePoint { date, growth_yoy, inflation_yoy }` shape. Single 12-month-offset percent-change formula with NaN guards on warm-up (first 12 entries) and non-positive priors (avoids div-by-zero / sign-flip).
+- Inner-join on `(year, month)` rather than exact date — INDPRO and CPI observation dates don't always coincide within a month, so calendar-month keying preserves all valid pairs.
+- Long-run baselines (arithmetic means of the full joined history) returned for crosshair placement. Critical detail: US inflation has been positive for 50+ years, so 0/0 quadrant split would put the entire trail in the upper half. Anchoring at long-run means turns the chart into "above-trend vs below-trend" — economically informative.
+- `axis_bounds` expand to include both trail min/max AND the baselines, padded ±1.5pp. Symmetric-around-zero falls back only when the trail is empty.
+- 3 new unit tests (`yoy_basic_12_month_pct_change`, `yoy_warmup_first_n_are_nan`, `yoy_skips_nonpositive_prior`) → 20/20 total green.
+- Registry: `regime_quadrant` (display_order 7, scope `macro`, default config_json `{"inflationProxy":"cpi","trailMonths":24}`).
+- IPC: `compute_regime_quadrant` command + `lib.rs::tauri::generate_handler!` registration.
+
+**(3) Frontend — `RegimeQuadrantTab.tsx` (commit `d471633`, ~330 LOC).**
+- Toolbar: inflation-proxy dropdown (CPI YoY headline / Core PCE YoY) + trail-length picker (12/24/36/48). Persisted via `usePersistedState('session.analysis_regime_quadrant_config')`.
+- ECharts scatter with four `markArea` quadrant fills split at the baselines: TR Reflation (green), BR Goldilocks (blue), BL Disinflation (gray), TL Stagflation (red). Stagflation/Disinflation alphas at 0.09 (bumped from 0.06/0.07 first draft for stronger left-half contrast).
+- Single trail line with per-point opacity gradient (0.2 oldest → 1.0 head) + scatter head dot with `position: 'right'` label showing the current observation date. Tooltip per-point shows date + growth/inflation YoY.
+- Crosshair `markLine` at both baselines, `theme.markerLine` solid width 1. **Deliberate divergence from RRG** — RRG has no explicit crosshair because its quadrant boundary lands on x=100 / y=100 where the splitLine grid happens to render. Regime baselines fall at non-round values (~2.74 / 3.52) that don't coincide with gridlines, so the boundary needs an explicit cue.
+- TabIntro filled in per the S17-mandatory pattern. Subtitle reads in plain language; "How to read this" walks through each quadrant with the regime-color mapping; "The math" gives the YoY formula + the calendar-month inner-join note + the baseline-as-mean note.
+- Always-visible chart container with `minHeight: 520` (EC-15 lesson — never `display: data ? 'block' : 'none'`).
+- Footer: `current <date> · growth X% · inflation Y% · baselines G% / I% · trail N months · series INDPRO × CPIAUCSL`.
+
+**(4) Layout polish — RRG + Regime in lockstep.** Three iterations during smoke test:
+- **Quadrant-label readability.** First draft fontSize 10 was too small to read. Bumped 10 → 13 → 16 across two iterations; same change applied to RRG for visual parity.
+- **Left-side label collision (RRG only).** "LAGGING" was clipping behind the y-axis tick label area — RRG's tick labels like "115.0" (4 chars wide) collided with the `left: 60` graphic position. Moved `left: 60 → 80` for the IMPROVING/LAGGING pair (and the symmetric STAGFLATION/DISINFLATION pair on Regime) so both charts stay aligned. Regime's tick labels are short (1-3 chars) so it didn't actually need the move, but applied for symmetry.
+- **Crosshair iteration on Regime.** First draft used `theme.markerLine` solid (correct intent). User flagged it was more distinct than RRG's. Tried `borderSubtle` dashed (matches gridlines) — too subtle, the user noted "the white quadrant separation line no longer appears." Restored to original `theme.markerLine` solid + width 1 with a comment explaining the deliberate divergence (see decision above). Captured as a non-bug — RRG and Regime intentionally differ here.
+
+**(5) Watermark-style quadrant labels considered + rejected.** During the readability iteration the user asked whether ECharts could render the quadrant names as faint backgrounds behind the data, like FeatureChart's terminal-style ticker watermark (pattern at `FeatureChart.tsx:769-787` — single centered `graphic` text, `fill: theme.watermarkFill` = `text-primary @ 0.05`, `z: 0`, `silent: true`). For a 4-quadrant chart the implementation diverges: 4 entries, dynamic positioning (Regime quadrants are anchored at runtime baselines, not fixed coords), color/alpha tradeoffs (semantic colors faded vs neutral). User picked the simpler path — bump the existing corner labels' fontSize and leave them in place. Pattern noted as a future enhancement option.
+
+**(6) Smoke-test outputs.** Four screenshots committed under `01_initial_design/screenshots/`:
+- `Screenshot 2026-05-02 072116.png` — CPI YoY, 24-month trail. Head at 2026-03-01 in DISINFLATION (growth 0.74% < baseline 2.74%; inflation 3.32% < baseline 3.52%) — economically plausible (cooling inflation off 2022 spike + below-trend industrial production).
+- `072205.png` — Core PCE toggle, 24mo. Same head positioning, slightly different y-axis range.
+- `072336.png` — Core PCE, 48-month trail. Full COVID-era inflation spike visible in upper portion (4-5%+ inflation, weak growth in 2022-23) trailing back down to current near-baseline reading.
+- `074346.png` — RRG with bumped fontSize 13 showing the LAGGING-clip issue that drove the `left: 80` fix.
+
+**Course corrections in-session.**
+- **0/0 vs baseline crosshair.** Initial axis-bounds compute centered the chart at 0/0. Realized US inflation has been positive for 50+ years so the trail would sit entirely in the upper half — non-informative. Refactored backend to compute long-run mean baselines and expand axis bounds to include them. Quadrant interpretation shifted from "absolute level" to "above-trend vs below-trend."
+- **Crosshair styling oscillation.** Three styling iterations driven by smoke test (markerLine-solid → borderSubtle-dashed → back to markerLine-solid). The lesson: RRG and Regime intentionally diverge here — RRG's split coincides with grid; Regime's doesn't. Don't force them to match where the data shape doesn't allow it.
+- **Quadrant-label fontSize.** Three rounds (10 → 13 → 16). 16 is readable at the four corners without dominating; the watermark-behind-data alternative was deferred as future work.
+- **`left: 60` vs `left: 80` for left-side labels.** Driven by RRG's longer y-axis tick labels. Both charts now use `left: 80` for visual symmetry.
+
+**Discussions parked / scope deferred.**
+- **Watermark-style quadrant labels.** User-considered, deferred. Would replace the small corner labels with large faint quadrant names rendered behind the trail data, mirroring `FeatureChart.tsx`'s ticker watermark. Implementation has tradeoffs (4 entries, dynamic positioning for Regime's runtime baselines, color choice) — user picked the simpler "bump fontSize in place" fix this session.
+- **MACRO-tile retrofit for Recession Prob + FCI** (S15 Q4 "both surfaces"). Still deferred. Shared `<MacroSeriesView mode="tile" | "chart">` component would land cheaply; useful when daily-glance value is desired.
+- **NAPM toggle for Regime Quadrant.** v1.2 escalation if INDPRO YoY's backward-looking nature becomes an issue.
+- **Path (a) manual `log10()` transform** for Pairs + FeatureChart. Carry-over from S11/S17.
+- **Bulk-add modal on TickerChipPicker.** Carry-over from S16/S17.
+
+**Build artifacts.**
+- 2 commits on `feature/v1.1-regime-quadrant`, both fast-forwarded to master:
+  - `613e3f3` feat(analysis): regime quadrant backend — INDPRO/CPI(PCE) YoY compute + IPC
+  - `d471633` feat(analysis): RegimeQuadrantTab — quadrant scatter with trail + RRG label parity
+- Net additions: ~830 lines / 11 files. 20/20 analysis math tests green. `tsc --noEmit` clean. `npm run build` 3.91s, 664 modules.
+
+**Next session entry point.**
+- **If RC1 feedback lands:** triage bugs/polish/discoverability/v1.1; fix in-scope items; bump 4 files `1.0.0-rc.1` → `1.0.0`; rebuild; ship final.
+- **If continuing v1.1:** options are (a) MACRO-tile retrofit for RecProb/FCI via shared `<MacroSeriesView>` (small, closes a known design-doc gap), (b) Phase 4 (COT/AAII/VIX term — real new fetchers, larger), (c) FeatureChart enhancements (drawdown subpane is the cheapest first ship), (d) the watermark-style quadrant labels as a polish round on RRG + Regime.
+
+---
 
 ### S17 — v1.1 Analysis Phase 2 + Phase 3 (lean) + TabIntro pattern (2026-04-30)
 
@@ -313,10 +380,13 @@ Sessions S1–S13 — the entire v1.0 build arc from project inception through t
 - Future indicators (post-v1) — MACD, Bollinger Bands, Ichimoku, Volume Profile, candlestick patterns. All plug into the same trait.
 - v1.1 feature candidates (from brainstorm): seasonality heatmap, correlation heatmap, yield curve viz, earnings/economic calendar, backtesting module
 - Backtesting module (trendscope's own "Discovered" gap — "we've never measured whether flips are profitable")
-- **v1.1 Analysis section design sketch** (`.projects/02_v1_1_analysis/v11_analysis_design.md`, S14) — 4-phase plan for cross-asset analysis tools. **Phase 1 (Correlations + Yield Curve) shipped 2026-04-29 (S16). Phase 2 (Pairs + RRG) shipped 2026-04-30 (S17). Phase 3 lean (Recession Prob + FCI) shipped 2026-04-30 (S17).** Phase 3 remaining: Macro Regime Quadrant. Phase 4 (COT + AAII + VIX term — real new fetchers) follows.
+- **v1.1 Analysis section design sketch** (`.projects/02_v1_1_analysis/v11_analysis_design.md`, S14) — 4-phase plan for cross-asset analysis tools. **Phase 1 (Correlations + Yield Curve) shipped 2026-04-29 (S16). Phase 2 (Pairs + RRG) shipped 2026-04-30 (S17). Phase 3 lean (Recession Prob + FCI) shipped 2026-04-30 (S17). Phase 3 finish (Macro Regime Quadrant) shipped 2026-05-02 (S18).** Phase 4 (COT + AAII + VIX term — real new fetchers) follows.
+
+### Deferred from v1.1 Phase 3 finish (2026-05-02, S18)
+- **Watermark-style quadrant labels for RRG + Regime Quadrant.** User-considered during the S18 polish round. Would replace the corner labels (currently fontSize 16 with low opacity) with large faint labels rendered BEHIND the trail data — mirroring the `FeatureChart.tsx:769-787` ticker watermark pattern (single centered text, `text-primary @ 0.05`, `z: 0`, `silent: true`). For a 4-quadrant chart the implementation diverges: 4 graphic entries instead of 1; positioning is dynamic on Regime (quadrants split at runtime baselines), static on RRG (always 100/100); color choice between semantic-faint (~0.10 alpha on each quadrant's color) vs neutral-faint. User picked the simpler in-place fontSize fix this session. Can land in a future polish round if the corner layout starts to feel cramped.
+- **NAPM toggle for the Regime Quadrant** — v1.2 escalation if INDPRO YoY's backward-looking nature creates a financial-media-narrative mismatch. Watch for FRED's NAPM publication gaps before implementing.
 
 ### Deferred from v1.1 Phase 2 + Phase 3 lean (2026-04-30, S17)
-- **Macro Regime Quadrant** — Phase 3 remaining tool (4-quadrant scatter, growth × inflation, 24-month trail with current head). Held pending two open decisions: (a) NAPM vs INDPRO YoY for the growth axis (NAPM = forward-looking but FRED publication has gaps; INDPRO = clean monthly but backward-looking — recommended INDPRO), (b) whether the existing Recession Prob + FCI tabs gain MACRO-tile twins via a shared `<MacroSeriesView mode="tile" \| "chart">` component (S15 Q4 spec'd "both surfaces"; lean path shipped Analysis-only). Reuses RRG's tail-rendering pattern when it lands.
 - **MACRO-tile retrofit for Recession Prob + FCI.** S15 Q4 locked "both MACRO tile AND Analysis tab"; lean Phase 3 path shipped Analysis-only. Add when there's clear daily-glance value, ideally alongside the Macro Regime Quadrant build so the shared view component lands once.
 - **`RECPROUSM156N` upstream verification.** FRED's website 403'd Claude Code's WebFetch mid-session, so the series' current publication status couldn't be confirmed before commit. Tab ships with empty-state placeholder + external FRED link. If the user's smoke-test post-MACRO-refresh shows zero observations, swap to `USRECP` or another alternative in a follow-up commit.
 - **Path (a) manual `log10()` transform** (carry-over from S11) — for Pairs ratio chart AND FeatureChart price pane. ECharts default log axis is broken on sub-decade ranges (which is exactly where ratios live), so Pairs shipped without a log toggle. Pays for both surfaces at once when prioritized; ~2-3 hours.

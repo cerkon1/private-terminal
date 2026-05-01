@@ -151,6 +151,8 @@ Pure compute on existing data. Adds visual variety without expanding the data la
 
 ## Phase 3 tools — macro regime
 
+**Status:** Phase 3 fully shipped. Recession Prob + FCI shipped lean (S17, 2026-04-30) — Analysis-only, MACRO-tile retrofit deferred. Macro Regime Quadrant shipped (S18, 2026-05-02) — INDPRO YoY × CPI/PCE YoY with baseline-anchored crosshairs, 12/24/36/48-month trail picker. Implementation diverged from the original sketch in two ways worth noting: (a) growth axis chose INDPRO over NAPM for data hygiene (NAPM toggle deferred to v1.2), (b) crosshairs anchored at long-run mean baselines, not 0/0 — US inflation has been positive for decades so 0/0 split would put the entire trail in the upper half. See `00_tracking/memory/s18_regime_quadrant_decisions.md`. Zero new FRED series this phase — all of `RECPROUSM156N` / `NFCI` / `INDPRO` / `CPIAUCSL` / `PCEPILFE` were already seeded by Phase 1's `tile_visible` migration or M2's original FRED batch.
+
 Adds three FRED series. Same fetcher path; pure additive seed.
 
 ### 5. Macro Regime quadrant
