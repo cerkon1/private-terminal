@@ -244,7 +244,7 @@ function quadrantLabels(
 ): echarts.EChartsCoreOption['graphic'] {
   const labelStyle = (color: string) => ({
     fontFamily: 'JetBrains Mono, monospace',
-    fontSize: 10,
+    fontSize: 16,
     fontWeight: 'bold',
     fill: color,
     opacity: 0.55,
@@ -266,14 +266,14 @@ function quadrantLabels(
     },
     {
       type: 'text',
-      left: 60,
+      left: 80,
       bottom: 40,
       style: { text: 'LAGGING', ...labelStyle(theme.statusDown) },
       silent: true,
     },
     {
       type: 'text',
-      left: 60,
+      left: 80,
       top: 36,
       style: { text: 'IMPROVING', ...labelStyle('#60a5fa') },
       silent: true,
