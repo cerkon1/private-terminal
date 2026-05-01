@@ -16,6 +16,7 @@ pub mod financial_conditions;
 pub mod macro_overlays;
 pub mod pairs;
 pub mod recession_prob;
+pub mod regime_quadrant;
 pub mod registry;
 pub mod rrg;
 pub mod yield_curve;
@@ -51,4 +52,46 @@ pub struct ExcludedTicker {
 pub struct MacroPoint {
     pub date: chrono::NaiveDate,
     pub value: f64,
+}
+
+/// Two-axis macro reading at a single observation date — used by the
+/// Regime Quadrant tool (Phase 3). Both axes are YoY % change.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RegimePoint {
+    pub date: chrono::NaiveDate,
+    pub growth_yoy: f64,
+    pub inflation_yoy: f64,
+}
+
+/// Compute year-over-year % change on a chronologically-sorted monthly level
+/// series. For each point i, looks back exactly `months` rows and emits
+/// `(level[i] / level[i-months] - 1) * 100`. Output length matches input;
+/// the first `months` entries' values are NaN (insufficient history).
+///
+/// Operates on row offsets, not calendar dates — assumes the input is a
+/// regular monthly series (FRED INDPRO / CPIAUCSL / PCEPILFE all are).
+/// Skips emitting when the prior reference is non-positive (would invert
+/// the sign of the %-change).
+pub fn yoy_pct_change(points: &[MacroPoint], months: usize) -> Vec<MacroPoint> {
+    points
+        .iter()
+        .enumerate()
+        .map(|(i, p)| {
+            let value = if i < months {
+                f64::NAN
+            } else {
+                let prev = points[i - months].value;
+                if prev > 0.0 && prev.is_finite() && p.value.is_finite() {
+                    (p.value / prev - 1.0) * 100.0
+                } else {
+                    f64::NAN
+                }
+            };
+            MacroPoint {
+                date: p.date,
+                value,
+            }
+        })
+        .collect()
 }

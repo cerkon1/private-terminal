@@ -68,6 +68,13 @@ pub const ANALYSIS_TOOLS: &[AnalysisToolMeta] = &[
         display_order: 6,
         default_config_json: None,
     },
+    AnalysisToolMeta {
+        id: "regime_quadrant",
+        display_name: "Regime Quadrant",
+        scope: "macro",
+        display_order: 7,
+        default_config_json: Some(r#"{"inflationProxy":"cpi","trailMonths":24}"#),
+    },
 ];
 
 /// IPC shape returned by `list_analysis_tools` — registry meta merged with

@@ -91,6 +91,7 @@ pub fn run() {
             commands::analysis_cmds::compute_rrg,
             commands::analysis_cmds::compute_recession_prob,
             commands::analysis_cmds::compute_financial_conditions,
+            commands::analysis_cmds::compute_regime_quadrant,
         ])
         .run(tauri::generate_context!())
         .expect("error while running personal-terminal");

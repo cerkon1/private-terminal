@@ -19,6 +19,7 @@ use crate::analysis::{
     macro_overlays::{self, RecessionSegment},
     pairs::{self, PairsRequest, PairsResponse},
     recession_prob::{self, RecessionProbRequest, RecessionProbResponse},
+    regime_quadrant::{self, RegimeQuadrantRequest, RegimeQuadrantResponse},
     registry::{AnalysisToolInfo, ANALYSIS_TOOLS},
     rrg::{self, RrgRequest, RrgResponse},
     yield_curve::{self, YieldCurveRequest, YieldCurveResponse},
@@ -135,4 +136,13 @@ pub fn compute_financial_conditions(
 ) -> Result<FinancialConditionsResponse, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     financial_conditions::compute_financial_conditions(&db, request)
+}
+
+#[tauri::command]
+pub fn compute_regime_quadrant(
+    request: RegimeQuadrantRequest,
+    state: State<'_, AppState>,
+) -> Result<RegimeQuadrantResponse, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    regime_quadrant::compute_regime_quadrant(&db, request)
 }

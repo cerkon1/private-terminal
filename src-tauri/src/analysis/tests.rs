@@ -4,7 +4,8 @@
 use crate::analysis::align::{align_close_prices, log_returns, pearson};
 use crate::analysis::pairs::rolling_zscore;
 use crate::analysis::rrg::{rolling_sma, rolling_sma_skip_nan, weekly_close_resample};
-use crate::analysis::TickerKey;
+use crate::analysis::{yoy_pct_change, MacroPoint, TickerKey};
+use chrono::NaiveDate;
 
 fn k(ticker: &str) -> TickerKey {
     TickerKey {
@@ -205,4 +206,56 @@ fn rolling_sma_skip_nan_requires_n_finite_in_window() {
     assert!(r[0].is_none() && r[1].is_none() && r[2].is_none());
     assert!((r[3].unwrap() - 2.0).abs() < 1e-12);
     assert!((r[4].unwrap() - 3.0).abs() < 1e-12);
+}
+
+fn mp(year: i32, month: u32, value: f64) -> MacroPoint {
+    MacroPoint {
+        date: NaiveDate::from_ymd_opt(year, month, 1).unwrap(),
+        value,
+    }
+}
+
+#[test]
+fn yoy_basic_12_month_pct_change() {
+    // Month 0..23 with level rising 100 → 110 → 121 → ... (10% YoY).
+    // Specifically: levels [100, 100, ..., 100] for 12 months, then
+    // [110, 110, ..., 110] for 12 → YoY at indices 12..23 = 10.0.
+    let mut levels = Vec::new();
+    for m in 0..12 {
+        levels.push(mp(2024, (m % 12) + 1, 100.0));
+    }
+    for m in 0..12 {
+        levels.push(mp(2025, (m % 12) + 1, 110.0));
+    }
+    let yoy = yoy_pct_change(&levels, 12);
+    assert_eq!(yoy.len(), 24);
+    for i in 0..12 {
+        assert!(yoy[i].value.is_nan(), "i={i} expected NaN warm-up");
+    }
+    for i in 12..24 {
+        assert!(
+            (yoy[i].value - 10.0).abs() < 1e-9,
+            "i={i} expected 10.0, got {}",
+            yoy[i].value,
+        );
+    }
+}
+
+#[test]
+fn yoy_warmup_first_n_are_nan() {
+    let levels: Vec<MacroPoint> = (0..6).map(|i| mp(2025, i + 1, 100.0 + i as f64)).collect();
+    let yoy = yoy_pct_change(&levels, 12);
+    assert_eq!(yoy.len(), 6);
+    assert!(yoy.iter().all(|p| p.value.is_nan()));
+}
+
+#[test]
+fn yoy_skips_nonpositive_prior() {
+    // First entry 0.0, second 100.0 — months=1, so YoY at i=1 references the 0
+    // and must emit NaN (avoid div-by-zero / sign-flip).
+    let levels = vec![mp(2025, 1, 0.0), mp(2025, 2, 100.0), mp(2025, 3, 110.0)];
+    let yoy = yoy_pct_change(&levels, 1);
+    assert!(yoy[0].value.is_nan());
+    assert!(yoy[1].value.is_nan(), "prior was 0.0 — expected NaN");
+    assert!((yoy[2].value - 10.0).abs() < 1e-9);
 }

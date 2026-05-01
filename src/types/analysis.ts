@@ -210,3 +210,41 @@ export type FinancialConditionsResponse = {
   latestDate: string | null;
   observationCount: number;
 };
+
+// ────── Regime Quadrant (Phase 3) — INDPRO YoY × CPI/PCE YoY ──────
+
+export type RegimePoint = {
+  date: string;
+  growthYoy: number;
+  inflationYoy: number;
+};
+
+export type RegimeAxisBounds = {
+  xMin: number;
+  xMax: number;
+  yMin: number;
+  yMax: number;
+};
+
+export type RegimeQuadrantRequest = {
+  /** "cpi" → CPIAUCSL (default). "pce" → PCEPILFE (Core PCE). */
+  inflationProxy?: 'cpi' | 'pce';
+  /** 12 / 24 / 36 / 48; defaults to 24 backend-side. */
+  trailMonths?: number;
+};
+
+export type RegimeQuadrantResponse = {
+  /** Chronological; last entry is the current head dot. */
+  trail: RegimePoint[];
+  current: RegimePoint | null;
+  /** Long-run mean across the full available joined history. */
+  growthBaseline: number | null;
+  inflationBaseline: number | null;
+  axisBounds: RegimeAxisBounds;
+  growthSeriesId: string;
+  inflationSeriesId: string;
+  growthLabel: string;
+  inflationLabel: string;
+  trailMonthsRequested: number;
+  observationCount: number;
+};

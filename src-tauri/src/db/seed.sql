@@ -237,4 +237,5 @@ INSERT OR IGNORE INTO analysis_tools (id, display_name, scope, display_order, en
   ('pairs_ratio',           'Pairs',                'cross_asset', 3, 1, '{"quickPicks":[["BTC-USD","ETH-USD"],["GC=F","SI=F"],["HG=F","GC=F"],["^IXIC","^GSPC"]]}'),
   ('rrg',                   'RRG',                  'cross_asset', 4, 1, '{"benchmark":"^GSPC","rsPeriod":14,"momentumPeriod":5,"tailLength":8}'),
   ('recession_prob',        'Recession Prob',       'macro',       5, 1, NULL),
-  ('financial_conditions',  'Financial Conditions', 'macro',       6, 1, NULL);
+  ('financial_conditions',  'Financial Conditions', 'macro',       6, 1, NULL),
+  ('regime_quadrant',       'Regime Quadrant',      'macro',       7, 1, '{"inflationProxy":"cpi","trailMonths":24}');
