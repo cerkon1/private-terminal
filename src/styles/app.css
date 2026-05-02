@@ -2,6 +2,39 @@
   box-sizing: border-box;
 }
 
+/* ── Themed scrollbars (app-wide) ────────────────
+ * Single source of truth for scrollbar styling. Applies to every
+ * scrollable element in the app — sidebar, main content, modal bodies,
+ * table wraps, dropdown menus, etc. Adding a new scroll surface
+ * automatically inherits this look, so we never re-style per element.
+ *
+ * `scrollbar-width: thin` + `scrollbar-color` is the Firefox / standard
+ * spec path. The `::-webkit-scrollbar` pseudos handle the Chromium-based
+ * webview that Tauri ships on Windows / Mac / Linux. Both must be set.
+ */
+*, *::before, *::after {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-emphasis) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-emphasis);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
 html, body, #root {
   margin: 0;
   padding: 0;
@@ -171,7 +204,7 @@ html, body, #root {
 
 /* ── Sidebar ─────────────────────────────────── */
 .sidebar {
-  width: 180px;
+  width: 220px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -241,7 +274,7 @@ html, body, #root {
 }
 
 .sidebar__item--child {
-  padding-left: var(--space-xl);
+  padding-left: calc(var(--space-xl) + var(--space-xs));
   font-size: var(--fs-sm);
   letter-spacing: 0.04em;
   text-transform: none;
