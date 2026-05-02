@@ -38,6 +38,7 @@ export type ChartTheme = {
   // Status / candle
   statusUp: string;
   statusDown: string;
+  statusDownFill: string;       // status-down @ 0.18 — drawdown subpane area fill
   volUp: string;                // status-up @ 0.35
   volDown: string;              // status-down @ 0.35
 
@@ -72,6 +73,7 @@ export function getChartTheme(): ChartTheme {
     accentCyanFillSoft: rgbaVar('--accent-cyan-rgb', 0.08),
     statusUp: read('--status-up'),
     statusDown: read('--status-down'),
+    statusDownFill: rgbaVar('--status-down-rgb', 0.18),
     volUp: rgbaVar('--status-up-rgb', 0.35),
     volDown: rgbaVar('--status-down-rgb', 0.35),
     vrvpPoc: rgbaVar('--accent-yellow-rgb', 0.55),

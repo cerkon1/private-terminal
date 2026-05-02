@@ -62,6 +62,10 @@ export default function FeatureChart({
     'session.feature_chart_show_vrvp',
     true,
   );
+  const [showDrawdown, setShowDrawdown] = usePersistedState<boolean>(
+    'session.feature_chart_show_drawdown',
+    false,
+  );
   const [pngFlash, setPngFlash] = useState(false);
 
   // Default visible window — last ~1 year (~252 trading days) for candlesticks,
@@ -136,6 +140,7 @@ export default function FeatureChart({
         visibleRange,
         defaultStartPct,
         showVrvp,
+        showDrawdown,
       });
     }
     return buildLineOption({ title, units, observations, tooltipVisible });
@@ -152,6 +157,7 @@ export default function FeatureChart({
     visibleRange,
     defaultStartPct,
     showVrvp,
+    showDrawdown,
   ]);
 
   useEffect(() => {
@@ -207,6 +213,14 @@ export default function FeatureChart({
               title="Volume Profile — overlays a horizontal histogram of total volume by price level on the right side of the price pane. POC bin highlighted yellow."
             >
               VRVP
+            </button>
+            <button
+              type="button"
+              className={`feature-chart__tool ${showDrawdown ? 'feature-chart__tool--active' : ''}`}
+              onClick={() => setShowDrawdown((v) => !v)}
+              title="Drawdown — subpane below price showing % decline from the running peak. Floor = max drawdown over the visible window."
+            >
+              DD
             </button>
           </>
         )}
@@ -314,6 +328,7 @@ function buildCandlestickOption({
   visibleRange,
   defaultStartPct,
   showVrvp,
+  showDrawdown,
 }: {
   title: string;
   units: string;
@@ -325,18 +340,22 @@ function buildCandlestickOption({
   visibleRange: { start: number; end: number };
   defaultStartPct: number;
   showVrvp: boolean;
+  showDrawdown: boolean;
 }): echarts.EChartsCoreOption {
   const theme = getChartTheme();
   const overlayIndicators = indicators.filter((i) => i.pane === 'overlay');
   const subpaneIndicators = indicators.filter((i) => i.pane === 'subpane');
 
-  // Layout: price pane is the biggest; volume (when shown) is slim; each
-  // subpane indicator gets its own slim pane; dataZoom slider reserves
-  // ~30px at the bottom. When VOL is toggled off, the volume pane drops
-  // and the freed space goes to price + indicator panes.
-  const volumePaneIndex = showVolume ? 1 : -1;
-  const subpaneStartIndex = showVolume ? 2 : 1;
-  const paneCount = (showVolume ? 2 : 1) + subpaneIndicators.length;
+  // Layout: price pane is the biggest; drawdown (when shown) sits directly
+  // below price; volume (when shown) is slim and below drawdown; each
+  // subpane indicator gets its own slim pane below volume. Pane indices
+  // are assigned sequentially as toggles flip, so series can pin
+  // themselves to the right pane without per-toggle conditional math.
+  let nextPaneIdx = 1;
+  const drawdownPaneIndex = showDrawdown ? nextPaneIdx++ : -1;
+  const volumePaneIndex = showVolume ? nextPaneIdx++ : -1;
+  const subpaneStartIndex = nextPaneIdx;
+  const paneCount = subpaneStartIndex + subpaneIndicators.length;
 
   // Volume Profile (visible-range) bin computation — buckets total volume by
   // close-price across the visible window. Returns null when the visible
@@ -388,6 +407,23 @@ function buildCandlestickOption({
       if (priceBounds) {
         baseAxis.min = priceBounds.min;
         baseAxis.max = priceBounds.max;
+      }
+    } else if (i === drawdownPaneIndex) {
+      // Drawdown pane — anchored at 0% top, auto-fit floor from visible window.
+      // Drawdowns are always ≤ 0 by construction so the upper bound is fixed.
+      baseAxis.axisLabel = {
+        color: theme.textSecondary,
+        fontSize: 10,
+        formatter: (v: number) => `${v.toFixed(0)}%`,
+      };
+      baseAxis.max = 0;
+      if (autoFitY && visibleBars.length > 0) {
+        const visibleDd = computeDrawdown(visibleBars.map((b) => b.close));
+        let minDd = 0;
+        for (const v of visibleDd) {
+          if (v !== null && v < minDd) minDd = v;
+        }
+        baseAxis.min = minDd === 0 ? -1 : minDd * 1.05; // 5% padding below floor
       }
     } else if (i === volumePaneIndex) {
       // Volume pane — anchor to 0 baseline, no auto-fit.
@@ -491,7 +527,7 @@ function buildCandlestickOption({
     }
   }
 
-  // Volume bar series on the volume pane (index 1) — only when VOL is on.
+  // Volume bar series on the volume pane — only when VOL is on.
   if (showVolume) {
     series.push({
       name: 'Volume',
@@ -505,6 +541,27 @@ function buildCandlestickOption({
           return (b.close ?? 0) >= (b.open ?? b.close ?? 0) ? theme.volUp : theme.volDown;
         },
       },
+    });
+  }
+
+  // Drawdown subpane — % decline from running peak. Filled red area dropping
+  // from 0% to the visible-window floor. Computed on the full bar series so
+  // the running peak survives across the dataZoom window; auto-fit y-min is
+  // taken from the visible slice so the floor reads at full pane height.
+  if (showDrawdown) {
+    const drawdownData = computeDrawdown(bars.map((b) => b.close));
+    series.push({
+      name: 'Drawdown',
+      type: 'line',
+      xAxisIndex: drawdownPaneIndex,
+      yAxisIndex: drawdownPaneIndex,
+      data: drawdownData,
+      showSymbol: false,
+      smooth: false,
+      connectNulls: false,
+      lineStyle: { color: theme.statusDown, width: 1 },
+      areaStyle: { color: theme.statusDownFill },
+      z: 5,
     });
   }
 
@@ -595,10 +652,21 @@ function buildCandlestickOption({
   // the user put it instead of snapping back to default.
   const allPaneAxisIndices = Array.from({ length: paneCount }, (_, i) => i);
 
+  // Pin the watermark to the price grid's vertical center so it stays
+  // behind the candles when subpanes (drawdown / volume / RSI / ATR) push
+  // the chart's geometric center down. Horizontal center stays at 50% —
+  // grid `left: 60` / `right: 24` (px) are tiny relative to typical chart
+  // widths so the bias is negligible.
+  const priceGrid = grids[0];
+  const watermarkCenter = {
+    leftPct: 50,
+    topPct: parseFloat(priceGrid.top) + parseFloat(priceGrid.height) / 2,
+  };
+
   return {
     backgroundColor: 'transparent',
     textStyle: { fontFamily: 'JetBrains Mono, Consolas, monospace', color: theme.textPrimary },
-    graphic: watermarkGraphic(title, 96),
+    graphic: watermarkGraphic(title, 96, watermarkCenter),
     tooltip: {
       show: true,
       showContent: tooltipVisible,
@@ -766,12 +834,40 @@ function formatVolume(v: number): string {
   return String(Math.round(v));
 }
 
+/** Drawdown % from running peak. For each close[i], computes
+ *  (close[i] / max(close[0..i]) - 1) * 100. Always ≤ 0. Skips
+ *  non-positive closes (would invert the percent calculation). */
+function computeDrawdown(closes: number[]): (number | null)[] {
+  const out: (number | null)[] = [];
+  let peak = -Infinity;
+  for (const c of closes) {
+    if (!Number.isFinite(c) || c <= 0) {
+      out.push(null);
+      continue;
+    }
+    if (c > peak) peak = c;
+    out.push(peak > 0 ? (c / peak - 1) * 100 : null);
+  }
+  return out;
+}
+
 // Faint centered text behind the chart — terminal-style watermark.
-function watermarkGraphic(text: string, fontSize: number) {
+// Default placement is the chart container's geometric center (used by
+// single-pane line mode). Pass `gridCenter` to pin the watermark to a
+// specific grid's center instead — the candlestick chart uses this so
+// the watermark stays behind the price pane regardless of how many
+// subpanes (volume / drawdown / RSI / ATR) are toggled on.
+function watermarkGraphic(
+  text: string,
+  fontSize: number,
+  gridCenter?: { leftPct: number; topPct: number },
+) {
+  const positional = gridCenter
+    ? { left: `${gridCenter.leftPct}%`, top: `${gridCenter.topPct}%` }
+    : { left: 'center' as const, top: 'middle' as const };
   return {
     type: 'text' as const,
-    left: 'center' as const,
-    top: 'middle' as const,
+    ...positional,
     z: 0,
     silent: true,
     style: {
