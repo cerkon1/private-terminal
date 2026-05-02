@@ -116,7 +116,7 @@ function SectionView({
     return <AnalysisLayout />;
   }
   if (section === 'macro') {
-    return <MacroDashboard onDataChanged={onDataChanged} />;
+    return <MacroDashboard onDataChanged={onDataChanged} onSelectSection={onSelectSection} />;
   }
   if (section === 'news') {
     return <NewsDashboard onDataChanged={onDataChanged} />;

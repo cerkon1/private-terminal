@@ -439,7 +439,13 @@ INSERT OR IGNORE INTO fred_series (series_id, title, units, frequency, category)
 
 -- v1.1 Analysis-only series. Idempotent on every boot — covers fresh installs
 -- (seeded with DEFAULT 1, then flipped here) and pre-v1.1 DB upgrades.
-UPDATE fred_series SET tile_visible = 0 WHERE series_id IN ('USREC', 'DGS3MO', 'DGS2', 'DGS5', 'DGS30', 'RECPROUSM156N', 'NFCI');
+UPDATE fred_series SET tile_visible = 0 WHERE series_id IN ('USREC', 'DGS3MO', 'DGS2', 'DGS5', 'DGS30');
+
+-- v1.2 MACRO-tile retrofit (S22) — Recession Prob + FCI promoted from
+-- Analysis-only to dual-surface (MACRO tile + Analysis tab). Explicit
+-- flip back to 1 keeps existing DBs upgraded — those rows were set to 0
+-- in v1.1 and the line above no longer touches them.
+UPDATE fred_series SET tile_visible = 1 WHERE series_id IN ('RECPROUSM156N', 'NFCI');
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Analysis tool registry (Phase 1-3 tools, unchanged from S18)

@@ -11,9 +11,22 @@ type ViewMode = 'values' | 'heatmap';
 type Props = {
   /** Called after any successful refresh so the status bar re-reads DB stats. */
   onDataChanged?: () => void;
+  /** Cross-link out of MACRO into another section — used by the
+   *  Recession Prob + FCI tile clicks to land on the matching Analysis tab. */
+  onSelectSection?: (sectionId: string) => void;
 };
 
-export default function MacroDashboard({ onDataChanged }: Props) {
+// Tiles whose drill-down should route to an Analysis tab instead of the
+// generic FRED line chart (S22). Both series are also kept in MACRO so
+// the at-a-glance value is visible without leaving the dashboard; click
+// then takes the user to the rich rendering (threshold lines / NBER bars
+// / TabIntro) that already exists in the Analysis section.
+const ANALYSIS_TILE_HANDOFF: Record<string, string> = {
+  RECPROUSM156N: 'recession_prob',
+  NFCI: 'financial_conditions',
+};
+
+export default function MacroDashboard({ onDataChanged, onSelectSection }: Props) {
   const [tiles, setTiles] = useState<MacroTileData[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>(ALL_TAB);
@@ -80,6 +93,20 @@ export default function MacroDashboard({ onDataChanged }: Props) {
     if (activeCategory === ALL_TAB) return tiles;
     return tiles.filter(t => t.category === activeCategory);
   }, [tiles, activeCategory]);
+
+  const handleTileClick = (tile: MacroTileData) => {
+    const target = ANALYSIS_TILE_HANDOFF[tile.seriesId];
+    if (target && onSelectSection) {
+      // localStorage handoff (NOT the SQLite-backed usePersistedState) —
+      // AnalysisLayout consumes + clears it on mount once its own
+      // persisted-state load resolves. Same shape as the S17 Correlations
+      // → Pairs handoff and the S21 Pulse → TickerDashboard handoff.
+      localStorage.setItem('session.analysis_handoff_tab', target);
+      onSelectSection('analysis');
+      return;
+    }
+    setSelected(tile);
+  };
 
   // Fetch full history when a tile is selected.
   useEffect(() => {
@@ -179,7 +206,7 @@ export default function MacroDashboard({ onDataChanged }: Props) {
             key={t.seriesId}
             tile={t}
             heatmap={viewMode === 'heatmap'}
-            onClick={setSelected}
+            onClick={handleTileClick}
           />
         ))}
       </section>

@@ -15,7 +15,7 @@ import { ANALYSIS_TAB_REGISTRY } from './registry';
 export function AnalysisLayout() {
   const [tools, setTools] = useState<AnalysisToolInfo[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [activeId, setActiveId] = usePersistedState<string>(
+  const [activeId, setActiveId, activeIdStatus] = usePersistedState<string>(
     'session.analysis_active_tab',
     'correlation_matrix',
   );
@@ -53,6 +53,21 @@ export function AnalysisLayout() {
       setActiveId(visibleTools[0].id);
     }
   }, [visibleTools, activeId, setActiveId]);
+
+  // MACRO tile → Analysis tab handoff (S22). MacroDashboard writes the
+  // target tab id to localStorage before flipping section to ANALYSIS.
+  // Gated on activeIdStatus.loaded so the async usePersistedState load
+  // doesn't race our setActiveId and overwrite it back to the persisted
+  // value. Read + clear so a stale handoff can't hijack later manual
+  // selections.
+  useEffect(() => {
+    if (!activeIdStatus.loaded) return;
+    const target = localStorage.getItem('session.analysis_handoff_tab');
+    if (target) {
+      localStorage.removeItem('session.analysis_handoff_tab');
+      setActiveId(target);
+    }
+  }, [activeIdStatus.loaded, setActiveId]);
 
   // Cross-tab navigation: a tab can request a switch by dispatching
   // `analysis-set-active-tab` with detail = target tabId. Used by the
