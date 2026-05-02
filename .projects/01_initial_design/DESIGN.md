@@ -1,6 +1,17 @@
 # Design Sketch — Private Terminal
 
-v0.12 sketch (2026-04-26). M1–M7 shipped, M8 code-complete, M8.5 Maintenance complete, M8.6 Polish complete, S12 release-blocker pass complete, S13 Manage Watchlist refactor complete; **v1.0.0-rc.1 shipped to first cold-eye tester**.
+v0.13 sketch (2026-05-02). M1–M7 shipped, M8 code-complete, M8.5 Maintenance complete, M8.6 Polish complete, S12 release-blocker pass complete, S13 Manage Watchlist refactor complete, **v1.0.0-rc.1 shipped to first cold-eye tester**, v1.1 Analysis section Phase 1-3 shipped, v1.2 Pulse killer-feature shipped (S20 design + S20 database reformulation + S21 implementation), Scanner deprecated (S21).
+
+**v0.13 changes (S21):**
+- **v1.2 Pulse implementation shipped.** New top-level Rust module `src-tauri/src/cross_section/` (mod / compute / percentile / tests + `commands/cross_section_cmds.rs`) iterating every leaf sector_group ticker + every FRED series, computing REGIME / AGE / LEVEL / RSI / ATR / VOL / DD via percentile rank vs trailing-5y baseline. Universal indicator compute path bypasses per-ticker `indicator_settings` (cross-section reads break with mixed params). 9/9 cross_section unit tests green.
+- **Frontend `src/components/pulse/PulseDashboard.tsx`** (~430 LOC) — single-file view with TabIntro per S17 pattern, sticky column header, section-grouped body, filter chips ALL/BULL/BEAR/EXTREMES, sort indicators with desc → asc → off cycle. Style C saturated-block cells (96px × 26px, no internal border, 1px column-gap separator) + Palette 1 R→Y→G + neutral-hold saturation curve (40-60 muted, ramps at tails) + heavy section header + cyan PULSE banner with row counts.
+- **REGIME chips + heatmap = two distinct color axes intentionally.** REGIME chip = categorical state via SMMA Ribbon palette tokens (user-customizable via Settings → Appearance per S9). Heatmap cells = continuous percentile via fixed Palette 1. Don't have to match — different semantic roles. Mitigation: chip min-width 84px, alpha 0.28 background, border alpha 0.7 so it self-anchors against the heatmap.
+- **Ticker-column click → feature chart.** localStorage handoff `session.pulse_feature_chart_target = { ticker, dataSource }` matches S17 Correlations→Pairs pattern. TickerDashboard reads + clears (always-clear-on-mount) + auto-`setSelected(matchingTile)`. Bloomberg HRH / TradingView convention — ticker is hyperlink, cells are read-only data preserving their hover tooltips.
+- **Scanner deprecated** — Pulse subsumes its analytical content. PRIME button moved into Pulse banner contextually (renders only when `noBarsCount > 0`). RECOMPUTE killed (dead weight — both already recompute on mount). Scanner unrouted from sidebar + App.tsx; soft-deleted via `UPDATE sector_groups SET user_hidden = 1 WHERE id = 'scanner'`. Files preserved one release for revert; delete in v1.3 cleanup. Feature #10 (Multi-ticker scanner) superseded by Pulse — same rationale that killed feature #5 in S10.
+- **PRIME failures surfaced inline** — `result.failures` rendered under prime-status strip with per-ticker error + exchange-suffix hint. Tooltip rewritten to set honest expectations about bad symbols not recovering. Persisted `last_fetch_error` per-ticker (option 3) deferred to v1.3.
+- **App.tsx stale-section fallback** — invalid persisted `active_section` (legacy 'scanner', user-deleted custom group) redirects to `'pulse'` once `groups` loads.
+- **Section ordering pattern** — for hierarchical group enumeration, sort key = `(parent.display_order, g.display_order)` for sub-sectors and `(g.display_order, 0)` for top-level leaves. Naive `(parent.display_order ?? 0, ...)` collapses top-level leaves to `(0, ...)`, sorting them BEFORE sub-sectors. Caught at smoke-test (CRYPTO appearing above INDICES_AMERICAS); captured as LESSONS DB-11.
+- **Sidebar PINNED_IDS** = `['pulse', 'analysis', 'macro', 'news']`. Pulse pinned at position 0 as the "open this first" landing surface.
 
 **v0.12 changes (S13):**
 - **Manage Watchlist consolidation.** Sidebar `Manage Groups` + dashboard inline `EDIT` toggle → single `Manage Watchlist` modal with 3 tabs (`Tickers / Groups / News Feeds`). Default tab Tickers; last-selected ticker group persisted at `session.manage_watchlist_group`. New `src/components/ManageWatchlistModal.tsx`; `GroupsManagerModal.tsx` deleted. Inline EDIT toggle removed from `TickerDashboard.tsx` — range / refresh / heatmap controls always visible now.
@@ -176,7 +187,7 @@ Compute on-demand when feature chart opens (not persisted). `f64` precision (dis
 | **7** | **Session persistence** | Restore active section + sidebar expand state. `config` KV via `usePersistedState`. Feature charts always start closed. Indicator toggles already persisted per-ticker via `indicator_settings` (M6). Shipped S9. | M8 |
 | **8** | ~~Keyboard shortcuts~~ | ~~Ctrl+1..9 section switch, `/` focus search, `` ` `` toggle sidebar~~ | **DROPPED S9** — positional bindings conflict with user-editable groups. Ctrl+K palette (feature #3, M9) is the correct extensible nav shortcut. |
 | **9** | **Macro heatmap view** | Color-code FRED tiles green/red by YoY delta for at-a-glance macro health | M2 |
-| **10** | **Multi-ticker scanner** | "Show all tickers currently in SMMA Ribbon bull state" — sortable summary view across watchlist | M6 |
+| **10** | ~~Multi-ticker scanner~~ | ~~"Show all tickers currently in SMMA Ribbon bull state" — sortable summary view across watchlist~~ | **SUPERSEDED S21** — Pulse cross-section heatmap covers the same scan-the-universe use case with richer columns (percentile-LEVEL/RSI/ATR/VOL + DD). Scanner soft-deleted; PRIME moved into Pulse banner contextually. Files preserved one release for revert (Scanner.tsx + IndicatorScanner + scanner_snapshot IPC). |
 
 ---
 
@@ -222,21 +233,31 @@ CL=F, GC=F, SI=F, NG=F, HG=F, DX-Y.NYB
 ## Navigation — Left Sidebar Tree
 
 ```
-┌─ MACRO
-├─ INDICES
-├─ CRYPTO
-├─ US EQUITIES
-├─ CA EQUITIES ▼
-│  ├─ Energy
-│  ├─ Banking
-│  ├─ Telecom
-│  ├─ Crypto Miners
-│  └─ Metal Miners
-├─ FUTURES & FX
+PINNED (S21):
+┌─ PULSE
+├─ ANALYSIS
+├─ MACRO
 └─ NEWS
+─── separator ───
+USER-MANAGED:
+┌─ WATCHLIST              (empty by default — personal-additions slot)
+├─ INDICES ▼
+│  ├─ Americas
+│  ├─ Europe
+│  └─ Asia-Pacific
+├─ US EQUITIES ▼          (Tech / Banking / Energy / Telecom / Crypto Miners / Metal Miners / Healthcare / Staples / Utilities / REITs)
+├─ CA EQUITIES ▼          (mirror of US sub-sectors)
+├─ CRYPTO
+├─ COMMODITIES ▼
+│  ├─ Energy
+│  ├─ Metals
+│  └─ Agriculturals
+├─ FX
+├─ BONDS & RATES
+└─ VIX & RISK
 ```
 
-Click node → main pane. Click tile → feature chart with timeframe toggles + indicator panel. Market-hours strip persists in app shell (top or bottom).
+Click PULSE → percentile cross-section heatmap (every ticker × every FRED series). Click ANALYSIS → tabbed analysis tools. Click any sector node → tile grid. Click tile → feature chart with timeframe toggles + indicator panel. Market-hours strip persists in app shell (top or bottom). Scanner removed S21 (subsumed by Pulse).
 
 ---
 

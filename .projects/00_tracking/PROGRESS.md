@@ -1,6 +1,8 @@
 # Progress Log — Private Terminal
 
 ## Current Focus
+**S21 (2026-05-02) — Pulse killer-feature implementation + Scanner deprecation, uncommitted at session-end.** Visual prototype → real backend (`cross_section/` Rust module + IPC + 9 unit tests) → ticker-column-click navigation with auto-open feature chart via localStorage handoff → Scanner subsumed by Pulse (PRIME button moved to Pulse banner contextually, RECOMPUTE killed as dead weight, Scanner soft-deleted via `user_hidden=1`). PRIME failures now surface inline below the banner with per-ticker error rows + exchange-suffix hint. Light theme considered + deferred (S15 token markers are structural readiness only; real light theme is a separate 2-session arc, no demand signal yet, dark "marketing-cool" identity preserved). 7 modified files + 7 new files; `cargo check` clean, 9/9 cross_section + 20/20 analysis tests green, `npm run build` 3.80s. **Awaiting commit + push.**
+
 **S20 (2026-05-02) — v1.2 killer-feature design (Pulse) + database expansion shipped on master at `05416a0`.** Brainstorm + design + Phase-0 implementation arc covering three discrete pieces: (1) two new design docs under `.projects/03_cross_section_heatmap/` locking the Pulse percentile-cross-section heatmap concept (the "morning weird-detector" — every ticker + macro series expressed as percentile-rank vs its own 5y history, sortable, click-to-chart); (2) full reformulation of `db/seed.sql` from 72 tickers / 25 macro series to 176 tickers / 29 macro series with symmetric US ↔ CA sub-sectors (10 each), plus new top-level groups WATCHLIST (empty user slot) / COMMODITIES (sub-sectored) / FX / BONDS & RATES / VIX & RISK + PULSE pinned at sidebar position 0; (3) sidebar polish (180→220px width + indent bump + global themed thin scrollbar via `*` selector).
 
 **S19 (2026-05-02) — first FeatureChart enhancement (drawdown subpane) + Features-tab full rewrite shipped on master at `7fd94ec`.** Adds the `DD` toggle in the candlestick toolbar producing a red filled-area subpane below price (% from running peak, max=0%, auto-fit floor). Same session pinned the chart watermark to the price grid centre (was sliding into subpanes when many were on) and rewrote Settings → Features tab from 7 cards to 19 cards across 4 section headers (Chart Overlays & Subpanes / Indicators / Analysis Section / Dashboard & Layout) — closing a months-long discoverability gap where the v1.1 Analysis surface had zero coverage. SMMA Ribbon card gains a Tip explaining the `AUTO Y off + click Base` interaction.
@@ -13,9 +15,84 @@
 1. Tester feedback round (cold-eye review). No code commitments until feedback lands.
 2. After verification, bump `1.0.0-rc.1` → `1.0.0` in 4 places (`package.json`, `Cargo.toml`, `tauri.conf.json`, `version.ts`) + rebuild.
 
-**v1.2 priority queue (post-S20):** user executes the manual DB reset workflow to land on a clean reformulated seed (no leftover `futures_fx` group + no orphan tickers from the prior structure) → Pulse implementation against the richer 176-ticker universe → other FeatureChart enhancements (Vol Cone, Return Distribution, Seasonality heatmap, Anchored VWAP — each ~1 evening) → optional MACRO-tile retrofit for RecProb/FCI (shared `<MacroSeriesView>`) → Phase 4 (COT / AAII / VIX term — real new fetchers) → CoinGecko fetcher → bull/bear VRVP split → true log mode (Path a) → M9 features (overlay + Ctrl+K palette) → code signing.
+**v1.2 priority queue (post-S21):** other FeatureChart enhancements (Vol Cone, Return Distribution, Seasonality heatmap, Anchored VWAP — each ~1 evening) → optional MACRO-tile retrofit for RecProb/FCI (shared `<MacroSeriesView>`) → persisted `last_fetch_error` per-ticker (option 3 from S21 PRIME-failure work — surfaces bad symbols across sessions without re-PRIME) → Phase 4 (COT / AAII / VIX term — real new fetchers) → CoinGecko fetcher → bull/bear VRVP split → true log mode (Path a) → M9 features (overlay + Ctrl+K palette) → light theme (2-session arc; queue post-RC1 only if feedback surfaces it) → code signing → Scanner.tsx + scanner_snapshot IPC deletion (kept one release for revert-safety, drop in v1.3 cleanup).
 
 **Indicator naming note:** the quad-SMMA-state indicator was originally seeded as "Larsson Line" (trendscope's label). During S7 we renamed to **SMMA Ribbon** after confirming from the originator's own Medium post that the math is derivative of public community work, not his invention. Session logs below keep the original "Larsson" references as a historical record — code, DB seed, UI text, and `CLAUDE.md`/`DESIGN.md` use "SMMA Ribbon" going forward. See `memory/m6_indicator_rename.md`.
+
+### S21 — Pulse implementation + Scanner deprecation (2026-05-02)
+
+Build session for the v1.2 Pulse killer feature designed in S20. Uncommitted at session-end. 7 modified + 7 new files; `cargo check` clean, 9/9 cross_section + 20/20 analysis math tests green, `npm run build` 3.80s. Decisions captured in `memory/s21_pulse_implementation_decisions.md`.
+
+**(1) Pulse visual design lock (3 rounds of ASCII mocking + screenshot iteration).**
+- **Style C cell rendering** — saturated colored block ~96px × 26px with number inside (15px monospace, 600 weight). No internal cell border; 1px column-gap as the only separator. ASCII-bar glyph (▰▰▰▰▱) considered + dropped (5 quanta too coarse). Number-on-tint without block frame (Style B) considered + dropped (reads as "data table" not "heatmap").
+- **Palette 1 R→Y→G** — visceral / Bloomberg-y. Palette 2 (cyan/amber non-judgmental) considered for honesty, rejected — TabIntro absorbs the value-judgment caveat the same way every Bloomberg/TradingView heatmap does.
+- **Neutral-hold saturation curve** — 40-60 alpha ramps 0 → 0.06, then ramps to 0.55 at the tails. `pulseCellBg(percentile)` function. DD column = monotone red, depth-saturated, saturating at -40%.
+- **Heavy section header** — flat `--bg-elevated` background. Cyan-fade gradient was first attempt, dropped after smoke-test feedback "too elegant for marketing-cool." Row count + regime split inline.
+- **Top banner** — PULSE title (cyan, fs-xl, letter-spacing 0.18em) + tagline + total counts split (BULL/BEAR/NEUT/macro/EXTREMES) + filter chips. Tight 26px rows fit ~25 above fold on 1080p.
+
+**(2) REGIME chip palette decision — two distinct color axes, intentionally.** User flagged real visual disconnect: BULL chip = cyan (SMMA palette), heatmap "high" cell = green (status-up). Considered (A) repaint chips to R/Y/G, (B) repaint heatmap to cyan/rose, (C) keep both with beefier chips. Picked C: REGIME = categorical state via SMMA palette tokens (user-customizable via Settings → Appearance per S9), heatmap = continuous percentile via fixed Palette 1. Different semantic roles, don't have to match. Mitigation: chip `min-width: 84px`, alpha 0.28 background, border-color alpha 0.7 — reads as a self-anchored "regime indicator" not competing with cells. Option A was actually wrong (would silently override the user's customization).
+
+**(3) Copy: "your watchlist" → "your universe".** User caught semantic clash with the WATCHLIST sector_group (one of many; empty by default). Pulse iterates EVERY ticker across EVERY group + every FRED series, not just the WATCHLIST slot. Renamed in banner tagline + TabIntro subtitle + first bullet.
+
+**(4) Backend `cross_section/` module.**
+- Top-level Rust module (not under `analysis/`) — Pulse's distinct sidebar placement + likely growth of percentile-related compute justifies separation.
+- Files: `mod.rs` (types `CrossSectionRequest/Response`, `CrossSectionRow`, `CrossSectionSection`, `RegimeState`), `compute.rs` (~280 LOC), `percentile.rs` (CDF rank, NaN-safe, neutral-50 fallback), `tests.rs` (9 unit tests covering percentile edge cases + rolling-volume warmup/missing-volume).
+- IPC wrapper `commands/cross_section_cmds.rs::compute_cross_section`; registered in `lib.rs::generate_handler`.
+- `analysis_tools` registry row for `pulse` added to `seed.sql` (`display_order: 0`, `config_json: '{"lookbackYears":5}'`).
+- **Universal indicator compute path** — SMMA Ribbon / RSI / ATR run with default params for every ticker via `find_indicator(id).compute(&bars, &json!({...defaults}))`, ignoring `indicator_settings.enabled` and per-ticker params. Cross-section reads break if half the rows use different SMMA confirm_bars or RSI lengths.
+- Coverage gates: `<30 bars` → `no_bars: true` greyed row; `<252 bars` → `partial_history: true` asterisk on percentile cells; macro `<60 obs` → partial.
+- Section ordering bug caught at smoke-test: top-level leaves with no parent collapsed to sort-key `(0, ...)`, sorting them BEFORE sub-sectors. Fix: `match parent { Some(p) => (p.display_order, g.display_order), None => (g.display_order, 0) }`. See LESSONS DB-11.
+
+**(5) Frontend (`PulseDashboard.tsx`, ~430 LOC).** Single-file Pulse view. Ships with `<TabIntro>` per S17-mandatory pattern. Banner + TabIntro + sticky column header + section-grouped body. Filter chips ALL/BULL/BEAR/EXTREMES (always-grouped sort within sections, no auto-flatten). Sort indicators ▼/▲ on column headers, click-cycle through desc → asc → off. Always-clear-on-mount handoff consumption pattern. `pulseSampleData.ts` (visual prototype's hardcoded data) deleted.
+
+**(6) Ticker-column click → auto-open feature chart.** Picked **ticker column only** over whole-row click — Pulse's design doc promises hover-on-cell tooltips (raw value + percentile + lookback + last-fetched), so whole-row click would put every cell hover one accidental misclick from navigation. Bloomberg HRH / TradingView convention treats ticker as a hyperlink, cells as read-only data.
+- localStorage handoff `session.pulse_feature_chart_target = { ticker, dataSource }` matches S17 Correlations→Pairs pattern.
+- TickerDashboard reads + clears handoff after tiles load (always-clear, even on mismatch — prevents stale handoffs hijacking later manual navigation), `setSelected(matchingTile)` opens the inline feature chart.
+- `data_source` field added to `CrossSectionRow` so the handoff has an exact key (same ticker can exist under different sources).
+- App.tsx fallback: invalid persisted `active_section` (e.g. legacy 'scanner', user-deleted custom group) → redirect to 'pulse' once `groups` loads.
+- `setActiveSection` prop drilled from App through SectionView → PulseDashboard.
+
+**(7) Scanner deprecation.** Honest assessment: Pulse subsumes Scanner's analytical content. Scanner's unique value reduced to PRIME (critical, needs new home), RECOMPUTE (dead weight — both already recompute on mount), raw RSI/ATR/price (debatable; percentile lens more useful for cross-asset comparison).
+- **PRIME moved to Pulse banner** — amber chip in filter row, only renders when `noBarsCount > 0`. Calls `prime_scanner_histories`, refetches `compute_cross_section` after success. Contextual UX done right.
+- **RECOMPUTE killed** — pure muscle-memory bait, never produced new state.
+- **Scanner unrouted** — dropped from `PINNED_IDS` in Sidebar.tsx, dropped from App.tsx SectionView, import removed.
+- **Soft-deleted in seed** — `UPDATE sector_groups SET user_hidden = 1 WHERE id = 'scanner'` for existing DBs; row removed from `INSERT OR IGNORE` for fresh installs.
+- **Files preserved one release** — `Scanner.tsx`, IndicatorScanner component, `scanner_snapshot` IPC. Easy revert. Delete in v1.3.
+- DESIGN.md feature #10 ("Multi-ticker scanner") superseded — same rationale that killed feature #5 (Watchlist Performance) in S10.
+
+**(8) PRIME failure surfacing.** Old: `Primed 0 · 1 failed` was silent about which ticker. Tooltip lied — promised "fetch missing history" but PRIME can't help when symbol is invalid (e.g. user's seed has HIVE.TO but the actual listing is HIVE.V on TSX-V). Fix:
+- `result.failures` rendered as a list under the prime-status strip — one row per failure with monospace ticker + error message + hint about exchange-suffix mismatch.
+- Tooltip rewritten: "Fetch missing price history. Tickers that fail (typically because the symbol isn't on the data source) are listed below the banner."
+- Option 3 (persisted `last_fetch_error TEXT` column on `watchlist_tickers`) considered for v1.3 — would survive across sessions, no re-PRIME needed. Schema work + fetcher modifications kept it out of v1.2.
+
+**(9) Light theme considered + deferred.** S15 `[L]` token markers are *structural* readiness, not designed light palette. Real light theme = 2-session arc: design palette + per-component audit + ECharts re-tuning + heatmap saturation re-tuning for white backplate. Identity tradeoff (dark Bloomberg-y aesthetic just polished for marketing-cool Pulse), no demand signal (RC1 cold-eye feedback hasn't landed). Better next-session targets: Vol Cone / Return Distribution / Seasonality / Anchored VWAP / MACRO-tile retrofit / CoinGecko fetcher / M9 features.
+
+**Course corrections in-session.**
+- **Initial sort key collapsed top-level leaves to `(0, ...)`.** Caught at smoke-test when CRYPTO appeared above INDICES_AMERICAS. Fixed inline; captured as a durable LESSONS pattern (DB-11).
+- **REGIME chip "make it match" instinct.** First reflex was option A (repaint chips R/Y/G). User's smart question about respecting the SMMA palette customization (S9) caught the override. Settled on option C (two distinct color axes intentionally) — durable principle for future visual decisions.
+- **PRIME tooltip dishonesty.** First impl said "Fetch missing price history for greyed rows" — fine when PRIME succeeds, lying when symbols are invalid. User's HIVE.TO observation surfaced the gap. Fix landed in same session.
+- **Whole-row click instinct.** User asked the question; ticker-column-only is the right answer once you account for cell tooltips being a load-bearing UX feature. Committed.
+- **Light theme "is this a good time?"** Easy yes-instinct given prior token prep (S15). Resisted — proper light theme is a real arc, not a session-end polish pass.
+
+**Discussions parked / scope deferred.**
+- **Persisted per-ticker `last_fetch_error`** (option 3 from PRIME-failure work). Better diagnostic surface than the inline list — survives across sessions. Schema + fetcher work, queue v1.3.
+- **Light theme**. 2-session arc, queued for post-RC1 if feedback surfaces it.
+- **Scanner.tsx + scanner_snapshot IPC deletion.** Files preserved one release for revert-safety. Delete in v1.3 cleanup pass.
+- **Vol Cone / Return Distribution / Seasonality / Anchored VWAP** — each ~1 evening, FeatureChart enhancements queued from S19 precedent.
+- **Compute caching** — Pulse recomputes on every open. ~1s on 200 rows post-PRIME. If sluggish, design doc has `cross_section_cache` table option ready to deploy.
+
+**Build artifacts.**
+- 7 modified + 7 new files. Diff hand-tracked (no commit yet).
+- 9/9 cross_section unit tests + 20/20 analysis math tests green.
+- `cargo check` clean. `tsc --noEmit` clean. `npm run build` 3.80s, 664 modules (one less than mid-session due to `pulseSampleData.ts` deletion + Scanner import removal).
+- Smoke screenshots: `Screenshot 2026-05-02 183733.png` (early PULSE — uncovered REGIME-chip-vs-heatmap palette disconnect), `200600.png` (post-section-fix live data — saturation curve + heavy section headers + REGIME chips beefed up).
+
+**Next session entry point.**
+- Commit S21's work (`cargo check` clean, all gates pass, 7 + 7 files ready). User trusts the wrap-up; commit + push pending.
+- Then: highest-value next-session targets in priority order — (a) Vol Cone subpane (~1 evening, FeatureChart enhancement following S19 drawdown precedent), (b) MACRO-tile retrofit for RecProb/FCI via shared `<MacroSeriesView>` (~half session, closes a known design-doc gap), (c) v1.3 cleanup pass (delete Scanner.tsx + scanner_snapshot, persist last_fetch_error per ticker), (d) Phase 4 Analysis tools (COT/AAII/VIX term — real new fetchers, larger).
+- RC1 tester feedback still pending — no code commitments on that track.
+
+---
 
 ### S20 — v1.2 killer-feature design (Pulse) + database reformulation (2026-05-02)
 
