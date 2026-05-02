@@ -312,6 +312,19 @@ export default function FeaturesTab() {
           to jump to the Pairs tab pre-loaded with that pair as numerator /
           denominator — for a deeper look at the relationship.
         </li>
+        <li>
+          <span className="about-tips__key">WATCHLIST</span> at the top of the
+          sidebar is empty by default — a personal-additions slot. Add your
+          own tickers via Manage Watchlist and they'll appear there; create
+          additional custom sector groups for further organization.
+        </li>
+        <li>
+          <span className="about-tips__key">Reset to a fresh seed</span>:
+          back up your database first via Settings → Storage → Backup, close
+          the app, then rename or delete the database file at the path shown
+          in the header. Reopening the app rebuilds against the current seed.
+          Useful after a major upgrade or when starting over.
+        </li>
       </ul>
     </div>
   );
