@@ -2335,3 +2335,412 @@ html, body, #root {
   border-color: var(--border-subtle);
   cursor: default;
 }
+
+/* ==========================================================================
+   PULSE — v1.2 cross-section heatmap (prototype)
+   Style C (saturated blocks) + Palette 1 (R/Y/G diverging via tokens) +
+   neutral-hold saturation curve (40-60 stays quiet, ramps at the tails).
+   See `.projects/03_cross_section_heatmap/pulse_design.md`.
+   ========================================================================== */
+
+.pulse {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+/* Top banner — title block + counts + filter chips */
+.pulse__banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--border-emphasis);
+  background: var(--bg-surface);
+  flex-wrap: wrap;
+}
+
+.pulse__banner-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pulse__banner-name {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--accent-cyan);
+}
+
+.pulse__banner-tagline {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+
+.pulse__banner-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.pulse__banner-stats strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.pulse__sep {
+  color: var(--text-tertiary);
+  user-select: none;
+}
+
+.pulse__stat--bull strong { color: var(--state-bull); }
+.pulse__stat--bear strong { color: var(--state-bear); }
+.pulse__stat--neut strong { color: var(--state-neutral); }
+.pulse__stat--ext  strong { color: var(--accent-amber); }
+
+.pulse__banner-filters {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.pulse__filter-chip {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-emphasis);
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.pulse__filter-chip:hover {
+  color: var(--text-primary);
+  border-color: rgba(var(--accent-cyan-rgb), 0.4);
+}
+
+.pulse__filter-chip--active {
+  background: rgba(var(--accent-cyan-rgb), 0.16);
+  color: var(--accent-cyan);
+  border-color: rgba(var(--accent-cyan-rgb), 0.6);
+}
+
+/* PRIME button — only renders when greyed rows exist. Visually distinct
+   from the filter chips via amber accent so it reads as an action, not a
+   filter. Sits at the right end of the same row, separated by a margin. */
+.pulse__filter-chip--prime {
+  margin-left: var(--space-md);
+  background: rgba(var(--accent-amber-rgb), 0.16);
+  color: var(--accent-amber);
+  border-color: rgba(var(--accent-amber-rgb), 0.6);
+}
+
+.pulse__filter-chip--prime:hover:not(:disabled) {
+  background: rgba(var(--accent-amber-rgb), 0.24);
+}
+
+.pulse__filter-chip--prime:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pulse__prime-status {
+  padding: 4px var(--space-lg);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+  letter-spacing: 0.04em;
+}
+
+/* PRIME failure list — sits under the status strip when result.failures is
+   non-empty. Per-row shows ticker + error; surfaces exactly which symbol(s)
+   are misbehaving so the user can fix them via Manage Watchlist. */
+.pulse__prime-failures {
+  padding: 6px var(--space-lg) 8px;
+  background: rgba(var(--status-down-rgb), 0.07);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fs-xs);
+}
+
+.pulse__prime-failures-label {
+  color: var(--status-down);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+
+.pulse__prime-failures-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pulse__prime-failure {
+  display: flex;
+  gap: var(--space-md);
+  align-items: baseline;
+  font-family: var(--font-mono);
+}
+
+.pulse__prime-failure-ticker {
+  color: var(--text-primary);
+  min-width: 80px;
+  font-weight: 600;
+}
+
+.pulse__prime-failure-error {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pulse__prime-failures-hint {
+  margin-top: 4px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* TabIntro container — slim under the banner */
+.pulse__intro {
+  padding: var(--space-sm) var(--space-lg) 0;
+}
+
+/* Sticky column-header row */
+.pulse__head-row,
+.pulse__row {
+  display: grid;
+  grid-template-columns: 160px 92px 70px 96px 96px 96px 96px 92px;
+  align-items: stretch;
+  column-gap: 1px;
+  padding-left: var(--space-lg);
+  padding-right: var(--space-lg);
+}
+
+.pulse__head-row {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-emphasis);
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+}
+
+.pulse__head-cell {
+  display: flex;
+  align-items: center;
+  user-select: none;
+}
+
+.pulse__head-cell--num {
+  justify-content: center;
+}
+
+.pulse__head-cell--sortable {
+  cursor: pointer;
+}
+
+.pulse__head-cell--sortable:hover {
+  color: var(--text-primary);
+}
+
+.pulse__head-cell--sorted {
+  color: var(--accent-cyan);
+}
+
+.pulse__sort-mark {
+  font-size: 10px;
+  margin-left: 4px;
+  display: inline-block;
+  width: 10px;
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.pulse__sort-mark--active {
+  color: var(--accent-cyan);
+}
+
+/* Body scroll region */
+.pulse__body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Heavy section header — flat fill, bold uppercase, regime split count */
+.pulse__section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 8px var(--space-lg);
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border-emphasis);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pulse__section-name {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.pulse__section-meta {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+}
+
+/* Data row */
+.pulse__row {
+  height: 26px;
+  font-size: var(--fs-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pulse__row:hover {
+  background: rgba(var(--accent-cyan-rgb), 0.04);
+}
+
+.pulse__row--partial {
+  background: rgba(var(--text-secondary-rgb), 0.04);
+}
+
+.pulse__row--no-bars {
+  opacity: 0.5;
+}
+
+.pulse__ticker {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.pulse__ticker--clickable {
+  cursor: pointer;
+  text-align: left;
+}
+
+.pulse__ticker--clickable:hover {
+  color: var(--accent-cyan);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.pulse__regime-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulse__age-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 12px;
+  color: var(--text-secondary);
+}
+
+/* REGIME chip — beefier so it self-anchors against the heatmap palette.
+   Honors user's SMMA Ribbon palette (Settings → Appearance, S9) via the
+   --state-* tokens which are runtime-overrideable. */
+.pulse__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  padding: 3px 12px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+}
+
+.pulse__chip--bull {
+  background: rgba(var(--state-bull-rgb), 0.28);
+  color: var(--state-bull);
+  border-color: rgba(var(--state-bull-rgb), 0.7);
+}
+
+.pulse__chip--bear {
+  background: rgba(var(--state-bear-rgb), 0.28);
+  color: var(--state-bear);
+  border-color: rgba(var(--state-bear-rgb), 0.7);
+}
+
+.pulse__chip--neutral {
+  background: rgba(var(--state-neutral-rgb), 0.22);
+  color: var(--state-neutral);
+  border-color: rgba(var(--state-neutral-rgb), 0.55);
+}
+
+/* Percentile cell — saturated block with number inside. No internal border;
+   the 1px column-gap is the only separator. Lets the colors do more work. */
+.pulse__cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
+
+.pulse__cell--empty {
+  color: var(--text-tertiary);
+  background: transparent;
+  font-weight: 400;
+}
+
+.pulse__cell--dd {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pulse__partial-mark {
+  color: var(--accent-amber);
+  font-weight: 700;
+  margin-left: 1px;
+}
+
+.pulse__em {
+  color: var(--text-tertiary);
+}
+
+.pulse__placeholder {
+  padding: var(--space-2xl) var(--space-lg);
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.pulse__placeholder--error {
+  color: var(--status-down);
+}

@@ -37,10 +37,16 @@ UPDATE news_feeds SET enabled = 1 WHERE id = 'finnhub_general';
 -- consistency.
 INSERT OR IGNORE INTO sector_groups (id, parent_id, display_name, data_source, display_order, enabled) VALUES
   ('pulse',    NULL, 'PULSE',    'virtual', 0, 1),
-  ('scanner',  NULL, 'SCANNER',  'virtual', 1, 1),
   ('analysis', NULL, 'ANALYSIS', 'virtual', 2, 1),
   ('macro',    NULL, 'MACRO',    'fred',    3, 1),
   ('news',     NULL, 'NEWS',     'mixed',   4, 1);
+
+-- SCANNER deprecated S21 — Pulse subsumes its analytical content; PRIME
+-- moved into the Pulse banner. Soft-delete on existing DBs that still
+-- carry the row from prior installs (and from the S20 INSERT above that
+-- we just removed). user_hidden=1 hides it from list_sector_groups
+-- queries so it disappears from the sidebar without dropping data.
+UPDATE sector_groups SET user_hidden = 1 WHERE id = 'scanner';
 
 -- User-managed top-level (display_order 5+). WATCHLIST sits at the top
 -- of the user-managed section as the personal-additions slot — seeded
@@ -440,6 +446,7 @@ UPDATE fred_series SET tile_visible = 0 WHERE series_id IN ('USREC', 'DGS3MO', '
 -- ──────────────────────────────────────────────────────────────────────
 
 INSERT OR IGNORE INTO analysis_tools (id, display_name, scope, display_order, enabled, config_json) VALUES
+  ('pulse',                 'Pulse',                'cross_asset', 0, 1, '{"lookbackYears":5}'),
   ('correlation_matrix',    'Correlations',         'cross_asset', 1, 1, NULL),
   ('yield_curve',           'Yield Curve',          'macro',       2, 1, NULL),
   ('pairs_ratio',           'Pairs',                'cross_asset', 3, 1, '{"quickPicks":[["BTC-USD","ETH-USD"],["GC=F","SI=F"],["HG=F","GC=F"],["^IXIC","^GSPC"]]}'),

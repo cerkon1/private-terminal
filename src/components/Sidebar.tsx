@@ -15,7 +15,11 @@ type Props = {
 // Sections that ship as infrastructure — always visible, always at the top,
 // never user-managed. Order here is the rendered order regardless of
 // each row's `display_order` in the DB.
-const PINNED_IDS = ['scanner', 'analysis', 'macro', 'news'];
+// SCANNER deprecated S21 — Pulse's percentile cross-section subsumes its
+// analytical content; PRIME moved into the Pulse banner. Row stays in
+// sector_groups with user_hidden=1 so the seed INSERT OR IGNORE doesn't
+// resurrect it; component file kept for one release in case of revert.
+const PINNED_IDS = ['pulse', 'analysis', 'macro', 'news'];
 
 export default function Sidebar({ activeId, onSelect, onManage, groupsVersion }: Props) {
   const [groups, setGroups] = useState<SectorGroup[] | null>(null);

@@ -1,6 +1,7 @@
 mod analysis;
 mod commands;
 mod config;
+mod cross_section;
 mod db;
 mod indicators;
 mod sources;
@@ -92,6 +93,7 @@ pub fn run() {
             commands::analysis_cmds::compute_recession_prob,
             commands::analysis_cmds::compute_financial_conditions,
             commands::analysis_cmds::compute_regime_quadrant,
+            commands::cross_section_cmds::compute_cross_section,
         ])
         .run(tauri::generate_context!())
         .expect("error while running personal-terminal");

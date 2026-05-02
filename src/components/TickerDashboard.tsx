@@ -24,6 +24,13 @@ type Props = {
 
 type ViewMode = 'values' | 'heatmap';
 
+/// localStorage key written by Pulse when a ticker is clicked. Consumed +
+/// cleared once tiles load — auto-opens the feature chart for that ticker.
+/// Matches the S17 Correlations→Pairs handoff pattern.
+const PULSE_HANDOFF_KEY = 'session.pulse_feature_chart_target';
+
+type PulseHandoff = { ticker: string; dataSource: string };
+
 export default function TickerDashboard({
   sectorGroupId,
   sectorName,
@@ -70,6 +77,25 @@ export default function TickerDashboard({
       if (cancelled || !data) return;
       setTiles(data);
       onDataChanged?.();
+
+      // Pulse handoff: if the user just clicked a ticker on PULSE, the
+      // target sits in localStorage. Consume it and auto-open the feature
+      // chart for that ticker. Always clear so a stale handoff doesn't
+      // hijack a later manual navigation.
+      try {
+        const raw = localStorage.getItem(PULSE_HANDOFF_KEY);
+        if (raw) {
+          localStorage.removeItem(PULSE_HANDOFF_KEY);
+          const parsed = JSON.parse(raw) as PulseHandoff;
+          const target = data.find(
+            (t) => t.ticker === parsed.ticker && t.dataSource === parsed.dataSource,
+          );
+          if (target) setSelected(target);
+        }
+      } catch {
+        // Malformed handoff — clear and ignore.
+        localStorage.removeItem(PULSE_HANDOFF_KEY);
+      }
     });
     return () => {
       cancelled = true;

@@ -7,7 +7,7 @@ import MacroDashboard from './components/MacroDashboard';
 import ManageWatchlistModal from './components/ManageWatchlistModal';
 import MarketHoursStrip from './components/MarketHoursStrip';
 import NewsDashboard from './components/NewsDashboard';
-import Scanner from './components/Scanner';
+import PulseDashboard from './components/pulse/PulseDashboard';
 import SettingsModal from './components/SettingsModal';
 import Sidebar from './components/Sidebar';
 import StatusBar from './components/StatusBar';
@@ -37,6 +37,18 @@ export default function App() {
     invoke<SectorGroup[]>('list_sector_groups').then(setGroups);
   }, [groupsVersion]);
 
+  // Fallback when the persisted active_section no longer resolves — e.g.
+  // user was on SCANNER before it was deprecated (S21), or a custom group
+  // they later deleted. Drop them on PULSE rather than the "Loading
+  // section…" placeholder.
+  useEffect(() => {
+    if (groups.length === 0) return;
+    const valid = new Set(groups.map((g) => g.id));
+    if (!valid.has(activeSection)) {
+      setActiveSection('pulse');
+    }
+  }, [groups, activeSection, setActiveSection]);
+
   const handleDataChanged = () => {
     bumpDb();
     reloadGroups();
@@ -62,6 +74,7 @@ export default function App() {
             groups={groups}
             themeColors={themeColors}
             onDataChanged={handleDataChanged}
+            onSelectSection={setActiveSection}
           />
         </main>
       </div>
@@ -88,14 +101,16 @@ function SectionView({
   groups,
   themeColors,
   onDataChanged,
+  onSelectSection,
 }: {
   section: string;
   groups: SectorGroup[];
   themeColors: import('./types/theme').ThemeColors;
   onDataChanged: () => void;
+  onSelectSection: (sectionId: string) => void;
 }) {
-  if (section === 'scanner') {
-    return <Scanner />;
+  if (section === 'pulse') {
+    return <PulseDashboard onSelectSection={onSelectSection} />;
   }
   if (section === 'analysis') {
     return <AnalysisLayout />;
