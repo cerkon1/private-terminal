@@ -1,7 +1,9 @@
 # Progress Log — Private Terminal
 
 ## Current Focus
-**v1.1 Analysis section Phase 3 fully shipped on master (2026-05-02, S18).** Master at `d471633`. Seven Analysis tabs live: Correlations · Yield Curve · Pairs · RRG · Recession Prob · Financial Conditions · Regime Quadrant. The last Phase 3 tool (Macro Regime Quadrant) ships with INDPRO YoY (growth axis) × CPI YoY default + Core PCE toggle (inflation axis), 12/24/36/48-month trail picker, four-quadrant scatter with crosshairs anchored at long-run baselines, and the standard `<TabIntro>` pattern. Zero new FRED series — INDPRO + CPIAUCSL + PCEPILFE were already seeded since M2. 20/20 analysis math tests green (was 17/17 — three new YoY helper tests).
+**S19 (2026-05-02) — first FeatureChart enhancement (drawdown subpane) + Features-tab full rewrite shipped on master at `7fd94ec`.** Adds the `DD` toggle in the candlestick toolbar producing a red filled-area subpane below price (% from running peak, max=0%, auto-fit floor). Same session pinned the chart watermark to the price grid centre (was sliding into subpanes when many were on) and rewrote Settings → Features tab from 7 cards to 19 cards across 4 section headers (Chart Overlays & Subpanes / Indicators / Analysis Section / Dashboard & Layout) — closing a months-long discoverability gap where the v1.1 Analysis surface had zero coverage. SMMA Ribbon card gains a Tip explaining the `AUTO Y off + click Base` interaction.
+
+**v1.1 Analysis section Phase 3 fully shipped on master (2026-05-02, S18).** Master was `d471633` after S18. Seven Analysis tabs live: Correlations · Yield Curve · Pairs · RRG · Recession Prob · Financial Conditions · Regime Quadrant. The last Phase 3 tool (Macro Regime Quadrant) ships with INDPRO YoY (growth axis) × CPI YoY default + Core PCE toggle (inflation axis), 12/24/36/48-month trail picker, four-quadrant scatter with crosshairs anchored at long-run baselines, and the standard `<TabIntro>` pattern. Zero new FRED series — INDPRO + CPIAUCSL + PCEPILFE were already seeded since M2. 20/20 analysis math tests green (was 17/17 — three new YoY helper tests).
 
 **Phase 3 still-deferred:** MACRO-tile retrofit for Recession Prob + FCI (S15 Q4 spec'd "both surfaces"; lean path shipped Analysis-only). A shared `<MacroSeriesView mode="tile" | "chart">` component would land the tile twins cheaply; not blocking.
 
@@ -9,9 +11,78 @@
 1. Tester feedback round (cold-eye review). No code commitments until feedback lands.
 2. After verification, bump `1.0.0-rc.1` → `1.0.0` in 4 places (`package.json`, `Cargo.toml`, `tauri.conf.json`, `version.ts`) + rebuild.
 
-**v1.1 priority queue (post-Phase-3-complete):** optional MACRO-tile retrofit for RecProb/FCI (shared `<MacroSeriesView>`) → Phase 4 (COT / AAII / VIX term — real new fetchers) → CoinGecko fetcher → bull/bear VRVP split → true log mode (Path a) → M9 features (overlay + Ctrl+K palette) → code signing.
+**v1.1 priority queue (post-S19):** other FeatureChart enhancements following the drawdown precedent (Vol Cone, Return Distribution, Seasonality heatmap, Anchored VWAP — each ~1 evening) → optional MACRO-tile retrofit for RecProb/FCI (shared `<MacroSeriesView>`) → Phase 4 (COT / AAII / VIX term — real new fetchers) → CoinGecko fetcher → bull/bear VRVP split → true log mode (Path a) → M9 features (overlay + Ctrl+K palette) → code signing.
 
 **Indicator naming note:** the quad-SMMA-state indicator was originally seeded as "Larsson Line" (trendscope's label). During S7 we renamed to **SMMA Ribbon** after confirming from the originator's own Medium post that the math is derivative of public community work, not his invention. Session logs below keep the original "Larsson" references as a historical record — code, DB seed, UI text, and `CLAUDE.md`/`DESIGN.md` use "SMMA Ribbon" going forward. See `memory/m6_indicator_rename.md`.
+
+### S19 — Drawdown subpane + watermark pin + Features-tab rewrite (2026-05-02)
+
+Single-session arc — first FeatureChart enhancement on the v1.1 priority queue, plus two pieces of incidental polish surfaced during the smoke test. Two commits on `feature/v1.1-drawdown-subpane`, fast-forwarded to master at `7fd94ec`. Pure frontend; no backend, no FRED series, no schema.
+
+**(1) Drawdown subpane (commit `90c4705`).**
+- New `DD` toggle in the candlestick toolbar alongside AUTO Y / VOL / VRVP. Default off; persisted at `session.feature_chart_show_drawdown`.
+- Subpane sits **directly below price** (above volume + indicator subpanes per the user's preferred placement — drawdown is conceptually about price, not about volume or indicators).
+- **Pane-index math refactored** from per-toggle conditional offsets (`volumePaneIndex = showVolume ? 1 : -1; subpaneStartIndex = showVolume ? 2 : 1`) to a sequential `nextPaneIdx++` accumulator. Adding a future fixed subpane (Vol Cone, Return Distribution) drops in without per-toggle reshuffling — just one new `const x = showX ? nextPaneIdx++ : -1` line.
+- Y-axis: max anchored at 0% (drawdowns are always ≤ 0 by construction), min auto-fits to the visible window's deepest drawdown with 5% padding below. Formatter renders `${v.toFixed(0)}%`. Drawdown computed on the FULL bar series so the running peak survives across the dataZoom window; the y-min is taken from the visible slice so the floor reads at full pane height.
+- Series: red line + filled area via new `theme.statusDownFill` (`--status-down-rgb @ 0.18`) added to chartTheme.
+- `computeDrawdown(closes)` helper: ~12 LOC. `(close[i] / running_max - 1) × 100`. Skips non-positive closes (would invert the percent calculation).
+- Decision: **kept DD in the toolbar (Option α) instead of moving to IndicatorPanel.** Considered the conceptual case for grouping with RSI/ATR (all are "subpane series computed from price"), but the persistence + compute shape don't fit cleanly: indicators are Rust-computed + per-ticker; drawdown is TS-computed + global. Forcing it into the indicator framework would add a Rust module that just delegates running-max math (dumb). Cost-benefit favored toolbar placement.
+
+**(2) Watermark pinned to price grid (same commit `90c4705`).**
+- Was: `top: 'middle', left: 'center'` — chart-container geometric centre. With multiple subpanes on (drawdown + volume + RSI + ATR), the chart's centre slides DOWN into the indicator stack. Result: "Microsoft" bisecting RSI lines instead of sitting behind the candles.
+- Now: `watermarkGraphic(text, fontSize, gridCenter?)` — extracts `grids[0].top + grids[0].height/2` (price pane vertical centre) and pins the watermark there via percentage coords. Horizontal centre kept at 50% — `left:60 / right:24` (px) are tiny relative to typical chart widths so the bias is negligible.
+- Line mode (single pane) keeps the original chart-centre default — no regression for FRED feature charts.
+- VRVP (EC-11/EC-12) untouched: dedicated value-axis, `clip:false`, `tooltip:{show:false}`, `z:15`. None of the changes touched the VRVP series push or its axis wiring. Verified before commit.
+
+**(3) Y-axis name labels — tried + reverted.** Spec'd as "subpane labeling" via ECharts native `yAxis.name` (rotated text in the gutter, ~5 LOC × 3-4 panes). User feedback after first render: "looks odd I don't like it." Reverted same session. Concluded the Features tab + toolbar tooltips already cover the discoverability gap; no labeling needed in-chart. Corner-graphic alternative (small "DRAWDOWN" text in pane corner via `graphic`, like RRG quadrant labels) discussed and deferred.
+
+**(4) Features-tab full rewrite (commit `7fd94ec`).** Closed a months-long discoverability gap. Was 7 cards (VRVP / SMMA Ribbon / RSI+ATR / Scanner / Market-hours / Tile range / Indicator framework) + 3 outdated tips. Now 19 cards under 4 section headers + 3 refreshed tips:
+- **CHART OVERLAYS & SUBPANES (6):** Volume Profile (VRVP), Volume pane, Drawdown subpane, Auto-fit Y axis, Linked cursor, PNG save
+- **INDICATORS (3):** Indicator framework, SMMA Ribbon (with new AUTO-Y-off Tip — see §5), RSI (14) and ATR (14)
+- **ANALYSIS SECTION (9):** Overview + TabIntro pattern, Correlations, Yield Curve, Pairs / Ratio, RRG, Recession Probability, Financial Conditions Index, Regime Quadrant, NBER recession bar overlay
+- **DASHBOARD & LAYOUT (3):** Scanner, Market-hours strip, Tile range switch
+- **Tips refresh:** dropped obsolete "EDIT inside ticker dashboard" tip (S13 deprecated the inline EDIT toggle); renamed "Manage Groups" → "Manage Watchlist" (S13); added Correlations cell-click → Pairs cross-link tip (S17).
+- Section headers use existing `.settings-subhead` class — no new CSS.
+- Analysis-section cards kept succinct since each tab carries its own `<TabIntro>` disclosures (subtitle + How to read + The math). The Features tab is the discovery surface; the in-tab disclosures are the reference.
+- Card content style guideline established: `What` mandatory, `Where` mandatory, `Caveat / Liability / Origin / Tip` when meaningful — don't pad short cards just to match long ones.
+
+**(5) SMMA Ribbon "Base" toggle — diagnosed + documented.** User reported a regression: clicking "Base" in the chart legend used to drop the SMMA Ribbon to the x-axis as state-coloured hills/valleys; now it disappears. Investigation:
+- SMMA Ribbon emits 4 stacked series from Rust: `Base` (= `min(v1, v2)`, transparent fill, lifts the bands up to where v1/v2 actually live) + `Bull Band` / `Bear Band` / `Neutral Band` (= `|v1-v2|` on bars matching state, else 0).
+- Stacked rendering on MSFT (~$300-500 candles): Base ≈ $300 lifts the bands to $305 region, visible alongside candles.
+- Click Base off: stack collapses → bands stack from y=0 → bands at y=0-5 are FAR below AUTO Y's price range ($290-520) → invisible.
+- **Not a regression from this session** — my changes (drawdown / watermark / FeaturesTab) don't touch the SMMA series push, the legend, the VRVP wiring, or the price y-axis bounds. Confirmed via `git diff master --stat` before commit. The interaction is intrinsic to ECharts stacking + the AUTO Y bounds added in S11.
+- User verified: toggling AUTO Y off + click Base = bands appear at chart bottom (screenshot `Screenshot 2026-05-02 085740.png`). Behavior is working-as-designed.
+- **Resolution:** added a Tip line to the SMMA Ribbon Features card explaining the interaction. No code fix; the dead-end click isn't actually a dead end — it's a feature that requires AUTO Y off.
+
+**Course corrections in-session.**
+- **Drawdown placement decision (toolbar vs IndicatorPanel).** Quick discussion at smoke-test time. Picked toolbar after laying out the persistence-shape mismatch — moving to IndicatorPanel would be conceptually consistent but require an indicator-framework adapter for what's really just frontend math. Documented as a future option if the chart toolbar gets crowded.
+- **Y-axis labels reverted.** First-attempt `yAxis.name` rotated labels read poorly in the slim gutter. Reverted same session. Lesson: when adding labels to an already-tight pane gutter, eyeball the visual before committing — `nameGap` math doesn't always preview cleanly.
+- **Watermark pinning logic simplified.** First draft tried to derive horizontal centre from `(left - right) / 2 / containerWidth` — overengineered. Container width isn't known at option-build time and the bias from `left:60 / right:24` is tiny. Simplified to `leftPct: 50` with a comment noting the negligible asymmetry.
+- **SMMA Base "regression" was UX, not code.** Initial reflex was to investigate the SMMA series push for changes. Trace through the code + the AUTO Y bounds math showed it's been this way since S11 (M8.6) when AUTO Y was added. The user was likely remembering the behavior from a small-priced ticker (where y=0 was inside the visible range) or a session where AUTO Y was off. Documented + tipped instead of patching code.
+- **Features-tab structural decision.** Considered (a) flat list of 19 cards vs (b) sectioned under headers. Picked (b) — at 19 cards a flat scroll was visibly long during smoke. Section headers use the existing `.settings-subhead` class (no new CSS).
+
+**Discussions parked / scope deferred.**
+- **Per-pane corner-graphic labels** (small "DRAWDOWN" / "VOLUME" / "RSI" text in pane corners via ECharts `graphic`, like the RRG quadrant labels). Considered as the alternative to the rejected `yAxis.name` approach. Deferred — Features tab + toolbar tooltips cover the discoverability need; in-chart labels would add visual weight without proportional value.
+- **Watermark fontSize auto-scaling** based on price pane height. With multiple subpanes the price pane shrinks; fontSize 96 may dwarf a small price pane. Not addressed this session — pinning to the price-pane centre solved the visible bug; auto-scaling is a v1.2 polish.
+- **DD button promotion to IndicatorPanel.** Considered (Option β in the placement discussion). Deferred. If chart toolbar gets crowded with future "subpane" toggles (Vol Cone / Return Distribution), revisit.
+- **Other FeatureChart enhancements** (Vol Cone, Return Distribution, Seasonality heatmap, Anchored VWAP per design doc). Drawdown sets the precedent; each subsequent one is ~1 evening using the same sequential `nextPaneIdx++` pattern.
+
+**Build artifacts.**
+- 2 commits on `feature/v1.1-drawdown-subpane`, both fast-forwarded to master:
+  - `90c4705` feat(charts): drawdown subpane + watermark pin to price grid
+  - `7fd94ec` docs(settings): expand Features tab — subpanes + Analysis section coverage
+- Net additions: ~310 lines / 3 files (+ 3 smoke screenshots). `tsc --noEmit` clean. `npm run build` 4.26s.
+- Smoke screenshots committed to `01_initial_design/screenshots/`:
+  - `Screenshot 2026-05-02 081808.png` — drawdown subpane on MSFT, toolbar showing DD active.
+  - `082036.png` — MSFT with VOL + VRVP + DD + RSI + ATR all on. Captured the watermark drift problem that drove the price-grid pinning.
+  - `085740.png` — SMMA Ribbon Base toggled off with AUTO Y off, state-coloured hills/valleys at chart bottom.
+
+**Next session entry point.**
+- Conversation incoming on a "potential new feature that will knock socks off for new users — something nobody else thought of, since we have all this data." Brainstorm posture, not code-first.
+- If continuing the FeatureChart-enhancement track: Vol Cone is the next cheapest (~1 evening), then Return Distribution / Seasonality / Anchored VWAP.
+- RC1 tester feedback still pending; no code commitments on that track.
+
+---
 
 ### S18 — v1.1 Analysis Phase 3 finish: Macro Regime Quadrant (2026-05-02)
 
