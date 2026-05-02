@@ -1,6 +1,8 @@
 # Progress Log — Private Terminal
 
 ## Current Focus
+**S20 (2026-05-02) — v1.2 killer-feature design (Pulse) + database expansion shipped on master at `05416a0`.** Brainstorm + design + Phase-0 implementation arc covering three discrete pieces: (1) two new design docs under `.projects/03_cross_section_heatmap/` locking the Pulse percentile-cross-section heatmap concept (the "morning weird-detector" — every ticker + macro series expressed as percentile-rank vs its own 5y history, sortable, click-to-chart); (2) full reformulation of `db/seed.sql` from 72 tickers / 25 macro series to 176 tickers / 29 macro series with symmetric US ↔ CA sub-sectors (10 each), plus new top-level groups WATCHLIST (empty user slot) / COMMODITIES (sub-sectored) / FX / BONDS & RATES / VIX & RISK + PULSE pinned at sidebar position 0; (3) sidebar polish (180→220px width + indent bump + global themed thin scrollbar via `*` selector).
+
 **S19 (2026-05-02) — first FeatureChart enhancement (drawdown subpane) + Features-tab full rewrite shipped on master at `7fd94ec`.** Adds the `DD` toggle in the candlestick toolbar producing a red filled-area subpane below price (% from running peak, max=0%, auto-fit floor). Same session pinned the chart watermark to the price grid centre (was sliding into subpanes when many were on) and rewrote Settings → Features tab from 7 cards to 19 cards across 4 section headers (Chart Overlays & Subpanes / Indicators / Analysis Section / Dashboard & Layout) — closing a months-long discoverability gap where the v1.1 Analysis surface had zero coverage. SMMA Ribbon card gains a Tip explaining the `AUTO Y off + click Base` interaction.
 
 **v1.1 Analysis section Phase 3 fully shipped on master (2026-05-02, S18).** Master was `d471633` after S18. Seven Analysis tabs live: Correlations · Yield Curve · Pairs · RRG · Recession Prob · Financial Conditions · Regime Quadrant. The last Phase 3 tool (Macro Regime Quadrant) ships with INDPRO YoY (growth axis) × CPI YoY default + Core PCE toggle (inflation axis), 12/24/36/48-month trail picker, four-quadrant scatter with crosshairs anchored at long-run baselines, and the standard `<TabIntro>` pattern. Zero new FRED series — INDPRO + CPIAUCSL + PCEPILFE were already seeded since M2. 20/20 analysis math tests green (was 17/17 — three new YoY helper tests).
@@ -11,9 +13,87 @@
 1. Tester feedback round (cold-eye review). No code commitments until feedback lands.
 2. After verification, bump `1.0.0-rc.1` → `1.0.0` in 4 places (`package.json`, `Cargo.toml`, `tauri.conf.json`, `version.ts`) + rebuild.
 
-**v1.1 priority queue (post-S19):** other FeatureChart enhancements following the drawdown precedent (Vol Cone, Return Distribution, Seasonality heatmap, Anchored VWAP — each ~1 evening) → optional MACRO-tile retrofit for RecProb/FCI (shared `<MacroSeriesView>`) → Phase 4 (COT / AAII / VIX term — real new fetchers) → CoinGecko fetcher → bull/bear VRVP split → true log mode (Path a) → M9 features (overlay + Ctrl+K palette) → code signing.
+**v1.2 priority queue (post-S20):** user executes the manual DB reset workflow to land on a clean reformulated seed (no leftover `futures_fx` group + no orphan tickers from the prior structure) → Pulse implementation against the richer 176-ticker universe → other FeatureChart enhancements (Vol Cone, Return Distribution, Seasonality heatmap, Anchored VWAP — each ~1 evening) → optional MACRO-tile retrofit for RecProb/FCI (shared `<MacroSeriesView>`) → Phase 4 (COT / AAII / VIX term — real new fetchers) → CoinGecko fetcher → bull/bear VRVP split → true log mode (Path a) → M9 features (overlay + Ctrl+K palette) → code signing.
 
 **Indicator naming note:** the quad-SMMA-state indicator was originally seeded as "Larsson Line" (trendscope's label). During S7 we renamed to **SMMA Ribbon** after confirming from the originator's own Medium post that the math is derivative of public community work, not his invention. Session logs below keep the original "Larsson" references as a historical record — code, DB seed, UI text, and `CLAUDE.md`/`DESIGN.md` use "SMMA Ribbon" going forward. See `memory/m6_indicator_rename.md`.
+
+### S20 — v1.2 killer-feature design (Pulse) + database reformulation (2026-05-02)
+
+Three-arc session: (1) brainstorm conversation that landed on **Pulse** as the v1.2 killer feature; (2) full DB seed reformulation (Phase 0 of the Pulse build); (3) sidebar polish + global scrollbar theming. Four commits on `feature/v1.2-database-reformulation`, fast-forwarded to master at `05416a0`. Pure design + frontend + DB seed; no backend code, no Rust changes, no schema mutation.
+
+**(1) Killer-feature brainstorm.** Open-ended conversation explicitly framed by the user as wanting the unbiased pick. Three concepts evaluated:
+- **Conviction Forge** (proposed by an external AI in `.projects/01_initial_design/potential_killer_feature.mb`) — Monte Carlo trade-idea simulator with a "Narrative Resonance Score" 0-100 gauge. **Rejected** for violating principle 9 of `CLAUDE.md` ("decision support, not investment advice") — a probability-fan + conviction gauge is a trade signal regardless of disclaimer wording. Also flagged: numerology (5 weighted inputs that double-count correlated features), curve-fit calibration claim, dependency on data the app doesn't have (news sentiment, fundamentals, real-time order flow), wrong framing for a personal-use tool with no growth metrics.
+- **Time Machine** (proposed by me) — single date picker that snaps the entire dashboard to any past date. **Killed** by the 5-year ticker-history limit: the demo wow ("show 2008 GFC") doesn't work because Yahoo's `/v8/chart` only serves ~5y back. Macro-only time machine (FRED has decades) was technically viable but loses the whole-dashboard punch.
+- **Pulse — percentile cross-section heatmap** (proposed by me, locked) — single screen showing every ticker + every macro series as percentile-rank vs its own 5y history across REGIME / AGE / LEVEL / RSI / ATR / VOL / DD columns (NEWS dropped — too ephemeral). Sortable, filterable (ALL / BULL / BEAR / EXTREMES), click-cell-to-chart. The "morning weird-detector." Honest by construction (descriptive, not predictive) and uniquely powered by the local-first architecture (Bloomberg can't show a personal universe; TradingView can't cross-section).
+
+**(2) Pulse design doc + database expansion proposal — locked, written, committed.** Two long-form design docs saved under new `.projects/03_cross_section_heatmap/`:
+- `pulse_design.md` (~370 lines) — TL;DR, goal, non-goals, why-killer-for-this-app, naming (PULSE), sidebar placement (pinned position 0), 7 columns locked with detailed semantics + compute model + macro-row treatment, color/visual design, interactivity, full TabIntro copy, architectural placement (top-level `cross_section/` Rust module + `PulseDashboard` React component + new IPC), persistence, performance considerations, implementation phases, file touch-list, smoke-test checklist, risks, 7 open questions to lock at build time.
+- `database_expansion.md` (~430 lines) — full Phase-0 spec covering the structural reformulation rationale ("mirror" over "extension"), 12 locked decisions (incl. drop BRK-B, move GLXY/WULF to US, keep CRYPTO flat + drop stablecoins, accept Telecom/Healthcare asymmetries, sub-sector INDICES + COMMODITIES, add WATCHLIST top-level), specific ticker populations per sub-sector, scale check (199 Pulse rows in the 100-200 sweet spot), rate-limit assessment (LOW risk + batched-prime mitigation), DB size estimate (55-65 MB post-expansion), pre-ship full-reset workflow.
+
+**(3) Pulse killer-feature concept — full column inventory.**
+| Column | Type | Source |
+|---|---|---|
+| REGIME | chip (BULL/BEAR/NEUTRAL/—) | SMMA Ribbon current state |
+| AGE | days | bars since last regime flip |
+| LEVEL | percentile | current value vs 5y own-history |
+| RSI | percentile | current RSI(14) vs 5y own-history |
+| ATR | percentile | current ATR(14) vs 5y own-history |
+| VOL | percentile | trailing-5d-avg volume vs 5y own-history |
+| DD | signed % | `(close / running_max - 1) × 100` |
+
+Universal indicator compute: cross-section ignores per-ticker `indicator_settings` enable flags — runs SMMA/RSI/ATR with default params for every watchlist ticker so every row gets every column. Macro rows get LEVEL only (em-dash everywhere else).
+
+**(4) Database reformulation — symmetric US ↔ CA sub-sectors + new top-level groups.** Full seed rewrite (commit `cabfe89`):
+- US EQUITIES gains 10 sub-sectors (Tech / Banking / Energy / Telecom / Crypto Miners / Metal Miners / Healthcare / Consumer Staples / Utilities / REITs) — exact mirror of CA EQUITIES which gains 5 new sub-sectors (Tech + Healthcare + Staples + Utilities + REITs) on top of the existing 5.
+- INDICES sub-sectored by region (Americas / Europe / Asia-Pacific) — 15 existing indices regrouped, no new tickers.
+- Old `futures_fx` mixed group split into:
+  - **COMMODITIES** sub-sectored (Energy / Metals / Agriculturals) — 11 commodity futures
+  - **FX** flat — DXY + 5 currency pairs (`EURUSD=X` `GBPUSD=X` `USDJPY=X` `USDCAD=X` `AUDUSD=X`)
+- New top-level groups: **WATCHLIST** (empty by default — personal-additions slot at top of user-managed sidebar), **BONDS & RATES** (TLT/IEF/SHY/HYG/LQD/TIP), **VIX & RISK** (^VIX). PULSE pinned at sidebar position 0 (registry row only — frontend wiring lands with Pulse implementation).
+- Drops: BRK-B (conglomerate doesn't fit any sub-sector), USDT-USD + USDC-USD (stablecoins are permanent flat rows = Pulse noise).
+- Moves: GLXY + WULF from `ca_crypto_miners` to `us_crypto_miners` (US-listed; geographic placement aligns with listing exchange).
+- 4 new FRED series: **M2SL** (money supply), **DTWEXBGS** (trade-weighted dollar), **BAMLH0A0HYM2** (HY credit spread), **DCOILWTICO** (WTI from FRED — deeper history than `CL=F`). All MACRO-visible — gain new categories Liquidity / Risk / Energy in the dashboard.
+- Final counts: 176 tickers (was 72, +104) + 29 FRED series (was 25, +4) = **205 Pulse rows total** (within 100-200 sweet spot, by 5).
+
+**(5) Sidebar layout polish (commit `05416a0`).** Smoke-test of the new sidebar revealed the 180px width felt cramped with the deeper sub-sector tree. Two changes:
+- Width 180 → **220px** (+22%); `.sidebar__item--child` left-padding bumped from `var(--space-xl)` to `calc(var(--space-xl) + var(--space-xs))` for sharper parent/child hierarchy.
+- **Themed scrollbars applied app-wide** via `*` selector at the top of `app.css`. Single source of truth — every scrollable element (sidebar, main content, modals, tables, dropdowns) inherits a 6px thin bar with `--border-emphasis` thumb on transparent track, hover-brightens to `--text-tertiary`. Replaces the default Windows scrollbar (white-ish track that fought the dark theme) with a dim-tone bar matching the FeatureChart dataZoom slider styling. New scroll surfaces inherit automatically — no per-element styling required.
+
+**(6) FeatureChart Tip — `Base` toggle interaction documented.** SMMA Ribbon Features card (already updated S19) gained a Tip explaining the AUTO-Y-off + click-Base interaction so the state-coloured hills/valleys behavior is reachable for users who want it. WATCHLIST tip + reset-workflow tip added to FeaturesTab Tips section (commit `a043ce9`).
+
+**(7) Refresh / Prime gap diagnosed during smoke test.** User reported "not all tickers have data" after the seed re-ran on top of the existing DB. Investigation:
+- REFRESH button (per-section) only fetches QUOTES → `quote_cache` (current price + change %). Does NOT fetch HISTORICAL bars.
+- New tickers from the reformulated seed have zero rows in `price_history` → all the change_pct_1w/1m/ytd/1y calculations return None → tiles show price but `—` for change columns + no charts available without per-tile click.
+- **Resolution:** SCANNER → PRIME button (S9 feature, `prime_scanner_histories`) batch-fetches historical bars for any ticker with zero bars in `price_history`. Function correctly handles the new parent/child sub-sector structure (iterates leaf groups, skips parents). One click; ~2-3 minutes for 100+ new tickers given the semaphore concurrency cap. No code change needed — feature already shipped.
+
+**Course corrections in-session.**
+- **Time Machine concept killed by data-window constraint.** First proposal sounded great until the user pointed out we only have 5y of ticker history (Yahoo cap). Shouldn't have proposed before checking data availability.
+- **Watermark fontSize discussion (S19 carry-over context).** User considered + rejected the watermark-style quadrant labels for Pulse rows. In-place fontSize bump is the established pattern for Pulse's column headers.
+- **Refresh-button confusion misread initially.** Almost dove into modifying the refresh path before tracing the architecture — the missing-data symptom was about HISTORY not QUOTES, and the existing PRIME button already solves it.
+- **Per-element scrollbar styling refactored to global.** First pass styled `.sidebar__scroll` then `.scanner-table-wrap` then `.app-main` separately. User asked for app-wide consistency; collapsed to a single `*` selector at the top of `app.css`. Removed the three per-element duplicates.
+
+**Discussions parked / scope deferred.**
+- **Pulse implementation** — design locked but blocked on user executing the manual DB reset workflow so Pulse v1 ships against a clean reformulated universe (no leftover `futures_fx` orphans). Reset = backup → close app → rename DB file → reopen.
+- **Old futures_fx group cleanup.** Smoke-test screenshot showed `FUTURES & FX` still present alongside the new structure because `INSERT OR IGNORE` left the old rows. Disappears on full reset. Documented in the design doc + the new Tip in FeaturesTab.
+- **Optional batched-prime extension (Phase 0d).** Original design considered extending prime to stage in batches of 30-50 with inter-batch delays as a Yahoo-throttle defense. Skipped — current PRIME path with semaphore=5 already handled the user's smoke-test fetch fine. Add only if Yahoo throttling is observed.
+- **MOVE bond-vol index** for VIX & RISK group — Yahoo coverage unreliable; skipped for v1.2. Add post-ship if Yahoo serves it.
+- **Pulse build session itself** — implementation pending. Spec is locked in `pulse_design.md`; the build session reads that doc top-to-bottom.
+
+**Build artifacts.**
+- 4 commits on `feature/v1.2-database-reformulation`, all fast-forwarded to master:
+  - `6aa0c89` docs(v1.2): Pulse design + database expansion proposal
+  - `cabfe89` feat(db): reformulated v1.2 seed — symmetric US/CA + 176 tickers + 29 FRED
+  - `a043ce9` docs(settings): FeaturesTab tips for WATCHLIST + reset workflow
+  - `05416a0` style(sidebar): wider sidebar + themed scrollbars app-wide
+- Net additions: ~1,400 lines / 7 files (4 new + 3 modified). All build gates clean: `cargo check` + `cargo test` (20/20 analysis math tests still passing) + `tsc --noEmit` + `npm run build` 3.78s.
+- Smoke screenshot committed: `Screenshot 2026-05-02 104449.png` showing the post-seed-upgrade sidebar in mid-migration state (FUTURES & FX leftover from the upgrade-without-reset path).
+
+**Next session entry point.**
+- **If user has done the DB reset:** verify clean state then begin Pulse implementation per `pulse_design.md`. Single weekend feature build.
+- **If user hasn't reset yet:** continue smoke-testing the reformulated seed against the current upgrade-state DB; flag any remaining data issues for fixes before Pulse work.
+- **If user wants something else:** other FeatureChart enhancements (Vol Cone, Return Dist, Seasonality, Anchored VWAP) following the S19 drawdown-subpane precedent are next-cheapest each ~1 evening.
+
+---
 
 ### S19 — Drawdown subpane + watermark pin + Features-tab rewrite (2026-05-02)
 
