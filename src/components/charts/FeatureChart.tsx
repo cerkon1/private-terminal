@@ -654,12 +654,12 @@ function buildCandlestickOption({
 
   // Pin the watermark to the price grid's vertical center so it stays
   // behind the candles when subpanes (drawdown / volume / RSI / ATR) push
-  // the chart's geometric center down. Horizontal center stays at 50% —
-  // grid `left: 60` / `right: 24` (px) are tiny relative to typical chart
-  // widths so the bias is negligible.
+  // the chart's geometric center down. Horizontal uses ECharts' 'center'
+  // keyword (auto-centers the text box on the container) — a numeric
+  // `left: '50%'` would anchor the box's left edge, not its center,
+  // despite `textAlign: 'center'`.
   const priceGrid = grids[0];
   const watermarkCenter = {
-    leftPct: 50,
     topPct: parseFloat(priceGrid.top) + parseFloat(priceGrid.height) / 2,
   };
 
@@ -860,10 +860,10 @@ function computeDrawdown(closes: number[]): (number | null)[] {
 function watermarkGraphic(
   text: string,
   fontSize: number,
-  gridCenter?: { leftPct: number; topPct: number },
+  gridCenter?: { topPct: number },
 ) {
   const positional = gridCenter
-    ? { left: `${gridCenter.leftPct}%`, top: `${gridCenter.topPct}%` }
+    ? { left: 'center' as const, top: `${gridCenter.topPct}%` }
     : { left: 'center' as const, top: 'middle' as const };
   return {
     type: 'text' as const,
