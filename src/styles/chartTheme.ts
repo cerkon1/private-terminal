@@ -34,6 +34,7 @@ export type ChartTheme = {
   accentCyanFillStrong: string; // line area gradient start (0.18)
   accentCyanFillFade: string;   // line area gradient end (0.0)
   accentCyanFillSoft: string;   // dataZoom filler (0.08)
+  accentAmber: string;          // anchored VWAP line (S22)
 
   // Status / candle
   statusUp: string;
@@ -71,6 +72,7 @@ export function getChartTheme(): ChartTheme {
     accentCyanFillStrong: rgbaVar('--accent-cyan-rgb', 0.18),
     accentCyanFillFade: rgbaVar('--accent-cyan-rgb', 0.0),
     accentCyanFillSoft: rgbaVar('--accent-cyan-rgb', 0.08),
+    accentAmber: read('--accent-amber'),
     statusUp: read('--status-up'),
     statusDown: read('--status-down'),
     statusDownFill: rgbaVar('--status-down-rgb', 0.18),

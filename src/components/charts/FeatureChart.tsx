@@ -66,6 +66,17 @@ export default function FeatureChart({
     'session.feature_chart_show_drawdown',
     false,
   );
+  const [showAvwap, setShowAvwap] = usePersistedState<boolean>(
+    'session.feature_chart_show_avwap',
+    false,
+  );
+  /** Anchor date for AVWAP. Transient by design — anchors are exploratory
+   *  ("since CPI dropped"), meaningful for an afternoon and stale a week
+   *  later. Cleared whenever bars change (new ticker selected) so an anchor
+   *  set on AAPL doesn't leak into MSFT, AND when the AVWAP toggle flips
+   *  off so re-toggling on starts fresh with the hint instead of resurrecting
+   *  the previous line. */
+  const [avwapAnchor, setAvwapAnchor] = useState<string | null>(null);
   const [pngFlash, setPngFlash] = useState(false);
 
   // Default visible window — last ~1 year (~252 trading days) for candlesticks,
@@ -86,6 +97,18 @@ export default function FeatureChart({
   useEffect(() => {
     setVisibleRange({ start: defaultStartPct, end: 100 });
   }, [defaultStartPct, bars.length]);
+
+  // Reset AVWAP anchor when the bar set changes — anchor on AAPL must not
+  // leak into MSFT. Transient by design.
+  useEffect(() => {
+    setAvwapAnchor(null);
+  }, [bars.length]);
+
+  // Also clear the anchor when AVWAP is toggled off, so re-toggling on
+  // shows the hint instead of resurrecting the previous line.
+  useEffect(() => {
+    if (!showAvwap) setAvwapAnchor(null);
+  }, [showAvwap]);
 
   // Init / teardown. Re-uses ResizeObserver to survive flex layout settle.
   useEffect(() => {
@@ -127,6 +150,46 @@ export default function FeatureChart({
     };
   }, [connectGroup]);
 
+  // AVWAP click-to-anchor handler. Wired through ZRender (the underlying
+  // canvas layer) so clicks anywhere on the price pane register, not just
+  // on candle bodies. Refs feed the latest mode/showAvwap/bars to a
+  // single attached handler — re-attaching on every render would race
+  // ECharts' own pointer state.
+  const showAvwapRef = useRef(showAvwap);
+  const barsRef = useRef(bars);
+  const modeRef = useRef(mode);
+  useEffect(() => {
+    showAvwapRef.current = showAvwap;
+    barsRef.current = bars;
+    modeRef.current = mode;
+  });
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const zr = chart.getZr();
+    const handler = (e: { offsetX: number; offsetY: number }) => {
+      if (!showAvwapRef.current || modeRef.current !== 'candlestick') return;
+      const currentBars = barsRef.current;
+      if (currentBars.length === 0) return;
+      const px: [number, number] = [e.offsetX, e.offsetY];
+      // Only respond to clicks inside the price grid (grid 0). Clicks on
+      // toolbar / subpanes / off-canvas are ignored. Use `{gridIndex: 0}`
+      // for both `containPixel` and `convertFromPixel` so the 2D pixel
+      // input → 2D [xVal, yVal] output round-trips correctly. Earlier
+      // draft passed `[x,y]` to `{xAxisIndex: 0}` finder, which expects
+      // a single number — silently returned NaN and the handler never
+      // resolved an anchor.
+      if (!chart.containPixel({ gridIndex: 0 }, px)) return;
+      const gridCoords = chart.convertFromPixel({ gridIndex: 0 }, px) as [number, number];
+      const xVal = gridCoords[0];
+      if (!Number.isFinite(xVal)) return;
+      const idx = Math.max(0, Math.min(currentBars.length - 1, Math.round(xVal)));
+      setAvwapAnchor(currentBars[idx].date);
+    };
+    zr.on('click', handler);
+    return () => zr.off('click', handler);
+  }, []);
+
   const option = useMemo<echarts.EChartsCoreOption>(() => {
     if (mode === 'candlestick') {
       return buildCandlestickOption({
@@ -141,6 +204,8 @@ export default function FeatureChart({
         defaultStartPct,
         showVrvp,
         showDrawdown,
+        showAvwap,
+        avwapAnchor,
       });
     }
     return buildLineOption({ title, units, observations, tooltipVisible });
@@ -158,6 +223,8 @@ export default function FeatureChart({
     defaultStartPct,
     showVrvp,
     showDrawdown,
+    showAvwap,
+    avwapAnchor,
   ]);
 
   useEffect(() => {
@@ -222,6 +289,14 @@ export default function FeatureChart({
             >
               DD
             </button>
+            <button
+              type="button"
+              className={`feature-chart__tool ${showAvwap ? 'feature-chart__tool--active' : ''}`}
+              onClick={() => setShowAvwap((v) => !v)}
+              title="Anchored VWAP — click any bar to anchor; line shows the volume-weighted average price from that date forward. Auto-suppresses for tickers with no volume."
+            >
+              AVWAP
+            </button>
           </>
         )}
         <button
@@ -237,6 +312,11 @@ export default function FeatureChart({
         )}
       </div>
       <div ref={ref} className="feature-chart__canvas" />
+      {mode === 'candlestick' && showAvwap && avwapAnchor === null && (
+        <div className="feature-chart__avwap-hint">
+          Click any bar to anchor AVWAP
+        </div>
+      )}
     </div>
   );
 }
@@ -329,6 +409,8 @@ function buildCandlestickOption({
   defaultStartPct,
   showVrvp,
   showDrawdown,
+  showAvwap,
+  avwapAnchor,
 }: {
   title: string;
   units: string;
@@ -341,6 +423,8 @@ function buildCandlestickOption({
   defaultStartPct: number;
   showVrvp: boolean;
   showDrawdown: boolean;
+  showAvwap: boolean;
+  avwapAnchor: string | null;
 }): echarts.EChartsCoreOption {
   const theme = getChartTheme();
   const overlayIndicators = indicators.filter((i) => i.pane === 'overlay');
@@ -524,6 +608,46 @@ function buildCandlestickOption({
                 : { color: s.color, width: 1 },
             }),
       });
+    }
+  }
+
+  // Anchored VWAP overlay on the price pane. Cumulative volume-weighted
+  // average price from the anchor bar forward. Auto-suppressed when the
+  // ticker has no usable volume (DXY / FX / volumeless indices) — the
+  // computeAvwap helper returns an all-null array, which we detect and
+  // skip series push so the line + anchor marker don't appear at all.
+  if (showAvwap && avwapAnchor !== null) {
+    const anchorIdx = bars.findIndex((b) => b.date === avwapAnchor);
+    if (anchorIdx >= 0) {
+      const avwapData = computeAvwap(bars, anchorIdx);
+      const anyValue = avwapData.some((v) => v !== null);
+      if (anyValue) {
+        series.push({
+          name: 'AVWAP',
+          type: 'line',
+          xAxisIndex: 0,
+          yAxisIndex: 0,
+          data: avwapData,
+          showSymbol: false,
+          connectNulls: false,
+          lineStyle: { color: theme.accentAmber, width: 1.5 },
+          itemStyle: { color: theme.accentAmber },
+          z: 8, // above SMMA fills (default z), below candles (z:10)
+          markPoint: {
+            symbol: 'triangle',
+            symbolSize: 10,
+            symbolRotate: 180,
+            silent: true,
+            label: { show: false },
+            itemStyle: { color: theme.accentAmber },
+            data: [
+              {
+                coord: [anchorIdx, avwapData[anchorIdx] ?? bars[anchorIdx].close],
+              },
+            ],
+          },
+        });
+      }
     }
   }
 
@@ -847,6 +971,32 @@ function computeDrawdown(closes: number[]): (number | null)[] {
     }
     if (c > peak) peak = c;
     out.push(peak > 0 ? (c / peak - 1) * 100 : null);
+  }
+  return out;
+}
+
+/** Anchored VWAP from anchorIdx forward. Pre-anchor bars get null; from
+ *  anchorIdx onward, AVWAP[i] = Σ(typical_price[j] × volume[j]) / Σ(volume[j])
+ *  where typical_price = (h + l + c) / 3 and the sums run from anchor to i.
+ *  Bars with missing OHLC or null/zero volume contribute nothing but don't
+ *  break the cumulative state — line carries forward the last valid value.
+ *  All-null result for tickers with no volume; caller skips series push. */
+function computeAvwap(bars: CandleBar[], anchorIdx: number): (number | null)[] {
+  const out: (number | null)[] = new Array(bars.length).fill(null);
+  let cumPv = 0;
+  let cumV = 0;
+  for (let i = anchorIdx; i < bars.length; i++) {
+    const b = bars[i];
+    const v = b.volume ?? 0;
+    const h = b.high ?? b.close;
+    const l = b.low ?? b.close;
+    const c = b.close;
+    if (Number.isFinite(c) && v > 0 && Number.isFinite(h) && Number.isFinite(l)) {
+      const tp = (h + l + c) / 3;
+      cumPv += tp * v;
+      cumV += v;
+    }
+    out[i] = cumV > 0 ? cumPv / cumV : null;
   }
   return out;
 }

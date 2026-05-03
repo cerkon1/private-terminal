@@ -572,6 +572,27 @@ html, body, #root {
   white-space: nowrap;
 }
 
+/* AVWAP click-to-anchor hint — surfaces only when the toggle is on but
+   no anchor is set. Pinned center-top of the chart so it's visible
+   without obscuring the price action. */
+.feature-chart__avwap-hint {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  background: rgba(var(--bg-surface-rgb), 0.85);
+  border: 1px solid rgba(var(--accent-amber-rgb), 0.6);
+  color: var(--accent-amber);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.08em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 /* Section label used by TickerDashboard controls row. */
 .macro-dashboard__section-label {
   font-family: var(--font-mono);
