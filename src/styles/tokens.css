@@ -52,9 +52,9 @@
   --status-neutral: #6b7280;
   --status-neutral-rgb: 107, 114, 128;
 
-  /* New semantic accents (added S15 — used by Scanner flip indicator + VRVP
-     POC + queued for v1.1 Analysis section: RRG quadrants, Yield Curve
-     threshold lines, Recession Probability warning bands).
+  /* New semantic accents (added S15 — used by Pulse extremes + VRVP POC +
+     v1.1 Analysis section: RRG quadrants, Yield Curve threshold lines,
+     Recession Probability warning bands).
      - amber: warning / flip / "improving" RRG quadrant
      - yellow: highlight / VRVP POC / "selected" emphasis
      - blue: "weakening" RRG quadrant; distinct from accent-cyan so a future
@@ -66,7 +66,7 @@
   --accent-blue: #3b82f6;
   --accent-blue-rgb: 59, 130, 246;
 
-  /* SMMA Ribbon / Scanner state palette. Single source of truth for
+  /* SMMA Ribbon / Pulse REGIME state palette. Single source of truth for
      anything that colors bullish/bearish/neutral on the frontend.
      The `-rgb` variants are the raw channels for rgba() tinting.
      IMPORTANT: Rust cannot read CSS vars — the Rust-side mirror of

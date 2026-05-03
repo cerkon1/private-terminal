@@ -20,7 +20,7 @@ export type TickerTileData = {
   marketCap: number | null;
   lastFetched: string | null;
   /** Percent change over N lookback windows, from price_history. Null when
-   *  the lookback bar isn't cached — user can prime history via the Scanner. */
+   *  the lookback bar isn't cached — user can prime history via the Pulse banner. */
   changePct1w: number | null;
   changePct1m: number | null;
   changePctYtd: number | null;

@@ -262,15 +262,23 @@ export default function FeaturesTab() {
       <div className="settings-subhead">Dashboard &amp; layout</div>
 
       <div className="about-card">
-        <div className="about-card__title">Scanner</div>
+        <div className="about-card__title">Pulse</div>
         <p className="about-card__body">
-          Cross-watchlist sortable view of every ticker's current SMMA Ribbon
-          state, latest price, RSI, and ATR. Click a column header to sort.
+          <strong>What:</strong> Single-screen percentile-rank cross-section of
+          every ticker and macro series in your universe — REGIME / AGE /
+          LEVEL / RSI / ATR / VOL / DD. Each cell answers "where is this today
+          vs the last 5 years of its own history?"
         </p>
         <p className="about-card__body">
-          <strong>PRIME button:</strong> One-click batch-fetch of historical
-          bars for any tickers missing them — needed before the indicator
-          engine can compute a state.
+          <strong>Where:</strong> PULSE is pinned at the top of the sidebar.
+          Click a ticker to jump straight to its feature chart; sort any of
+          the percentile columns to surface extremes.
+        </p>
+        <p className="about-card__body">
+          <strong>PRIME chip:</strong> Surfaces in the Pulse banner only when
+          some rows are missing history. One-click batch-fetch of historical
+          bars; failures (typically wrong exchange suffix) are listed inline
+          below the banner.
         </p>
       </div>
 

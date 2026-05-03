@@ -110,131 +110,6 @@ pub fn compute_indicators(
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ScannerRow {
-    pub ticker: String,
-    pub sector_group_id: String,
-    pub display_name: Option<String>,
-    pub display_currency: Option<String>,
-    /// Latest close price — for sort/context.
-    pub price: Option<f64>,
-    /// Committed SMMA Ribbon state on the most recent bar: "bullish" / "bearish" / "neutral".
-    pub state: Option<String>,
-    /// Bars since the most recent state flip (0 = flipped this bar).
-    pub bars_since_flip: Option<i64>,
-    /// Latest RSI(14).
-    pub rsi: Option<f64>,
-    /// Latest ATR(14) as percent of price.
-    pub atr_pct: Option<f64>,
-    #[serde(default)]
-    pub compute_error: Option<String>,
-}
-
-/// Scanner snapshot — current SMMA Ribbon state + RSI + ATR for every enabled ticker
-/// across every enabled sector. Reads `price_history` only; does NOT fetch new
-/// bars. Users should click through to a ticker's feature chart to trigger a
-/// history fetch if the scanner shows empty rows.
-#[tauri::command]
-pub fn scanner_snapshot(state: State<'_, AppState>) -> Result<Vec<ScannerRow>, String> {
-    let db = state.db.lock().map_err(|e| e.to_string())?;
-
-    // Collect all enabled tickers across all enabled leaf sector_groups.
-    // Skip parents (which never own tickers directly).
-    let mut targets: Vec<(String, String, String, Option<String>, Option<String>)> = Vec::new();
-    let sectors = db.list_sector_groups()?;
-    for sg in sectors.iter().filter(|s| s.enabled) {
-        let children = sectors
-            .iter()
-            .any(|s| s.parent_id.as_deref() == Some(sg.id.as_str()));
-        if children {
-            continue; // parent — skip
-        }
-        for t in db.list_tickers_in_sector(&sg.id)? {
-            targets.push((
-                t.ticker,
-                t.sector_group_id,
-                t.data_source,
-                t.display_name,
-                t.display_currency,
-            ));
-        }
-    }
-
-    let smma_ribbon = indicators::find_indicator("smma_ribbon");
-    let rsi = indicators::find_indicator("rsi_14");
-    let atr = indicators::find_indicator("atr_14");
-
-    let mut rows = Vec::with_capacity(targets.len());
-    for (ticker, sector_group_id, data_source, display_name, display_currency) in targets {
-        let bars = db.all_price_bars_ohlcv(&ticker, &data_source)?;
-        if bars.is_empty() {
-            rows.push(ScannerRow {
-                ticker,
-                sector_group_id,
-                display_name,
-                display_currency,
-                price: None,
-                state: None,
-                bars_since_flip: None,
-                rsi: None,
-                atr_pct: None,
-                compute_error: Some("no bars — open feature chart to fetch history".into()),
-            });
-            continue;
-        }
-
-        let price = bars.last().and_then(|b| b.close);
-
-        let (state, bars_since_flip) = match smma_ribbon
-            .and_then(|ind| ind.compute(&bars, &ind.default_params()).ok())
-        {
-            Some(out) => {
-                let state_name = out.regions.last().map(|r| r.label.clone());
-                let bsf = out.regions.last().and_then(|r| {
-                    // Find the index of the bar where this region started.
-                    bars.iter().position(|b| b.date == r.start_date).map(|i| {
-                        (bars.len() - 1 - i) as i64
-                    })
-                });
-                (state_name, bsf)
-            }
-            None => (None, None),
-        };
-
-        let rsi_val = rsi
-            .and_then(|ind| ind.compute(&bars, &ind.default_params()).ok())
-            .and_then(|out| {
-                out.series.into_iter().next().and_then(|s| {
-                    s.data.into_iter().rev().find_map(|p| p.value)
-                })
-            });
-
-        let atr_pct = atr
-            .and_then(|ind| ind.compute(&bars, &ind.default_params()).ok())
-            .and_then(|out| {
-                out.series.into_iter().next().and_then(|s| {
-                    s.data.into_iter().rev().find_map(|p| p.value)
-                })
-            })
-            .and_then(|atr_abs| price.map(|p| if p != 0.0 { atr_abs / p * 100.0 } else { 0.0 }));
-
-        rows.push(ScannerRow {
-            ticker,
-            sector_group_id,
-            display_name,
-            display_currency,
-            price,
-            state,
-            bars_since_flip,
-            rsi: rsi_val,
-            atr_pct,
-            compute_error: None,
-        });
-    }
-    Ok(rows)
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct PrimeFailure {
     pub ticker: String,
     pub error: String,
@@ -249,10 +124,12 @@ pub struct PrimeResult {
 
 /// Fetch + upsert history for every enabled watchlist ticker that currently
 /// has zero bars in `price_history`. Complement to the on-demand fetch path
-/// in `get_ticker_history` — this one batch-primes so the scanner sees a
-/// full snapshot without the user opening each feature chart by hand.
+/// in `get_ticker_history` — this one batch-primes so Pulse sees a full
+/// snapshot without the user opening each feature chart by hand. Invoked
+/// from the Pulse banner's PRIME chip when greyed (no-bars) rows exist.
 /// Yahoo-only (Finnhub-eligible filter isn't relevant here; every watchlist
-/// row with `data_source='yahoo'` is in scope).
+/// row with `data_source='yahoo'` is in scope). IPC name retained for
+/// backwards compat.
 #[tauri::command]
 pub async fn prime_scanner_histories(
     state: State<'_, AppState>,

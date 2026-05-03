@@ -62,7 +62,6 @@ pub fn run() {
             commands::indicator_cmds::get_indicator_settings,
             commands::indicator_cmds::set_indicator_setting,
             commands::indicator_cmds::compute_indicators,
-            commands::indicator_cmds::scanner_snapshot,
             commands::indicator_cmds::prime_scanner_histories,
             commands::news_cmds::list_news,
             commands::news_cmds::list_news_feeds,

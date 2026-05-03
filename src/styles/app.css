@@ -1075,77 +1075,8 @@ html, body, #root {
   height: 12px;
 }
 
-/* ── Scanner table ───────────────────────────── */
-.scanner-prime-status {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--text-secondary);
-  padding: var(--space-xs) 0;
-}
-
-.scanner-table-wrap {
-  overflow: auto;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-}
-
-.scanner-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-}
-
-.scanner-table th,
-.scanner-table td {
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--border-subtle);
-  text-align: left;
-  white-space: nowrap;
-}
-
-.scanner-table th {
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-  font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.scanner-table th.sortable {
-  cursor: pointer;
-  user-select: none;
-}
-
-.scanner-table th.sortable:hover {
-  color: var(--text-primary);
-}
-
-.scanner-table th.sorted {
-  color: var(--accent-cyan);
-}
-
-.scanner-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.scanner-table .ta-right {
-  text-align: right;
-}
-
-.scanner-table .mono {
-  font-family: var(--font-mono);
-}
-
-.scanner-table .dim {
-  color: var(--text-tertiary);
-  font-size: var(--fs-xs);
-}
-
+/* SMMA Ribbon state badge — used by Settings → Appearance palette preview.
+   Variants live inline (preview pulls colors from current palette state). */
 .state-badge {
   display: inline-block;
   padding: 2px 8px;
@@ -1154,61 +1085,6 @@ html, body, #root {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   border: 1px solid transparent;
-}
-
-/* State badges reference the centralized state palette in tokens.css.
-   To swap the palette, edit --state-bull / --state-bear / --state-neutral
-   there, and mirror the values in smma_ribbon.rs. */
-.state-badge--bullish {
-  color: var(--state-bull);
-  border-color: rgba(var(--state-bull-rgb), 0.4);
-  background: rgba(var(--state-bull-rgb), 0.1);
-}
-
-.state-badge--bearish {
-  color: var(--state-bear);
-  border-color: rgba(var(--state-bear-rgb), 0.4);
-  background: rgba(var(--state-bear-rgb), 0.1);
-}
-
-.state-badge--neutral {
-  color: var(--text-tertiary);
-  border-color: var(--border-subtle);
-  background: rgba(var(--state-neutral-rgb), 0.05);
-}
-
-.state-filter {
-  display: inline-flex;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.state-filter__btn {
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: var(--space-xs) var(--space-md);
-  cursor: pointer;
-  transition: all 120ms ease;
-  border-right: 1px solid var(--border-subtle);
-}
-
-.state-filter__btn:last-child {
-  border-right: none;
-}
-
-.state-filter__btn:hover {
-  color: var(--text-primary);
-}
-
-.state-filter__btn--active {
-  color: var(--accent-cyan);
-  background: rgba(var(--accent-cyan-rgb), 0.06);
 }
 
 /* Footer strip — version + cross-promo. Sits below the main content. */
