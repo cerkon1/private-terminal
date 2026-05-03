@@ -214,16 +214,24 @@ html, body, #root {
   padding-right: var(--space-md);
 }
 
+/* Sidebar text readability pass (S22). Previous values traded readability
+   for the dense Bloomberg aesthetic — text-secondary mono items at 14px
+   with 0.08em tracking + text-tertiary parent labels at 12px ALL CAPS
+   with 0.15em tracking stacked three accessibility taxes on the same
+   surface. New values keep the mono identity but raise contrast (items
+   to text-primary, parents to text-secondary), bump items 14→15px,
+   weight 400→500, and pull tracking back so word silhouettes survive. */
 .sidebar__item {
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: transparent;
   border: 1px solid transparent;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  letter-spacing: 0.08em;
+  font-size: var(--fs-md);
+  font-weight: 500;
+  letter-spacing: 0.02em;
   padding: var(--space-sm) var(--space-md);
   cursor: pointer;
   text-align: left;
@@ -232,8 +240,8 @@ html, body, #root {
 }
 
 .sidebar__item:hover:not(:disabled) {
-  color: var(--text-primary);
   border-color: var(--border-subtle);
+  background: rgba(var(--accent-cyan-rgb), 0.04);
 }
 
 .sidebar__item--active {
@@ -243,40 +251,48 @@ html, body, #root {
 }
 
 .sidebar__item--disabled {
-  opacity: 0.35;
+  opacity: 0.45;
   cursor: default;
 }
 
 .sidebar__item-badge {
   font-size: var(--fs-xs);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   text-transform: lowercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 
+/* Parent labels (US EQUITIES / CA EQUITIES / etc.) — kept ALL CAPS as
+   a hierarchy signal but brightened to text-secondary, font-weight bumped
+   to 500, and tracking pulled in so the letters don't disperse. Display
+   value comes from sector_groups.display_name in the DB; CSS-level
+   text-transform keeps caps so the seed stays consistent without forcing
+   a data migration. */
 .sidebar__item--parent {
-  color: var(--text-tertiary);
-  font-size: var(--fs-xs);
-  letter-spacing: 0.15em;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   margin-top: var(--space-sm);
 }
 
 .sidebar__item--parent:hover {
-  color: var(--text-secondary);
+  color: var(--text-primary);
   border-color: transparent;
   background: transparent;
 }
 
 .sidebar__chevron {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--fs-xs);
 }
 
 .sidebar__item--child {
   padding-left: calc(var(--space-xl) + var(--space-xs));
   font-size: var(--fs-sm);
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   text-transform: none;
 }
 
