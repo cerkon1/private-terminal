@@ -414,11 +414,6 @@ export default function TickerDashboard({
             />
           )}
         </div>
-        <div className="feature-chart-pane__liability">
-          Decision support, not investment advice. The SMMA Ribbon indicator
-          works best on tech/crypto at 4h–monthly timeframes; daily data is in
-          scope but commodities/indices sit outside the original design intent.
-        </div>
       </div>
     );
   }

@@ -44,28 +44,8 @@ export default function AppHeader({ refreshTrigger, onSettingsOpen, onPaletteOpe
 
   return (
     <header className="app-header">
-      <div className="app-header__top-row">
-        <h1 className="app-title">PRIVATE TERMINAL</h1>
-        <div className="app-header__actions">
-          <button
-            type="button"
-            className="app-header__icon-btn app-header__icon-btn--palette"
-            onClick={onPaletteOpen}
-            title="Search across the app (Ctrl+K)"
-          >
-            ⌘K
-          </button>
-          <button
-            type="button"
-            className="app-header__icon-btn"
-            onClick={onSettingsOpen}
-            title="Settings"
-          >
-            ⚙
-          </button>
-        </div>
-      </div>
-      <div className="app-header__sub-row">
+      <h1 className="app-title">PRIVATE TERMINAL</h1>
+      <div className="app-header__meta">
         {info ? (
           <>
             <button
@@ -77,16 +57,34 @@ export default function AppHeader({ refreshTrigger, onSettingsOpen, onPaletteOpe
               {info.path}
             </button>
             <span className="app-header__sep">·</span>
-            <span>{formatBytes(info.sizeBytes)}</span>
+            <span className="app-header__meta-item">{formatBytes(info.sizeBytes)}</span>
             <span className="app-header__sep">·</span>
-            <span>{info.seriesCount} series</span>
+            <span className="app-header__meta-item">{info.seriesCount} series</span>
             <span className="app-header__sep">·</span>
-            <span>{info.observationCount.toLocaleString()} bars</span>
+            <span className="app-header__meta-item">{info.observationCount.toLocaleString()} bars</span>
             {copied && <span className="app-header__copied">copied</span>}
           </>
         ) : (
           <span className="app-header__loading">locating database…</span>
         )}
+      </div>
+      <div className="app-header__actions">
+        <button
+          type="button"
+          className="app-header__icon-btn app-header__icon-btn--palette"
+          onClick={onPaletteOpen}
+          title="Search across the app (Ctrl+K)"
+        >
+          ⌘K
+        </button>
+        <button
+          type="button"
+          className="app-header__icon-btn"
+          onClick={onSettingsOpen}
+          title="Settings"
+        >
+          ⚙
+        </button>
       </div>
     </header>
   );

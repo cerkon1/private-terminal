@@ -127,7 +127,6 @@ export default function MarketHoursStrip() {
           >
             <span className="market-chip__dot" />
             <span className="market-chip__code">{ex.code}</span>
-            <span className="market-chip__time">{lt.hhmm}</span>
             <span className="market-chip__pct">{pctText}</span>
           </div>
         );

@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 
 type Props = {
-  /** Always-visible one-sentence description of what this chart shows. */
-  subtitle: string;
+  /** Always-visible one-sentence description of what this chart shows.
+   *  Optional — Analysis tabs ship with a subtitle per the S17 pattern;
+   *  Pulse and other surfaces with their own banner can omit it. */
+  subtitle?: string;
   /** Body of the "How to read this" disclosure — interpretation guide.
    *  Use a fragment with <ul>/<p> for structure. */
   howToRead: ReactNode;
@@ -25,7 +27,7 @@ const DEFAULT_LIABILITY =
 export function TabIntro({ subtitle, howToRead, math, liabilityNote }: Props) {
   return (
     <div className="tab-intro">
-      <p className="tab-intro__subtitle">{subtitle}</p>
+      {subtitle && <p className="tab-intro__subtitle">{subtitle}</p>}
       <div className="tab-intro__disclosures">
         <details className="tab-intro__disclosure">
           <summary className="tab-intro__summary">How to read this</summary>

@@ -57,27 +57,28 @@ html, body, #root {
 
 .app-header {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: var(--space-md);
-}
-
-.app-header__top-row {
-  display: flex;
-  align-items: baseline;
+  flex-direction: row;
+  align-items: center;
   gap: var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: var(--space-xs);
 }
 
-.app-header__sub-row {
+.app-header__meta {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex: 1 1 0;
+  min-width: 0;
   gap: var(--space-sm);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   color: var(--text-tertiary);
   letter-spacing: 0.03em;
+  overflow: hidden;
+}
+
+.app-header__meta-item {
+  flex-shrink: 0;
 }
 
 .app-header__path {
@@ -88,6 +89,10 @@ html, body, #root {
   padding: 0;
   cursor: pointer;
   text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .app-header__path:hover {
@@ -1019,14 +1024,6 @@ html, body, #root {
   padding: var(--space-sm);
 }
 
-.feature-chart-pane__liability {
-  font-size: var(--fs-xs);
-  color: var(--text-tertiary);
-  font-style: italic;
-  padding: 0 var(--space-sm);
-  line-height: 1.5;
-}
-
 /* ── Indicator panel (checkbox chips) ────────── */
 .indicator-panel {
   display: flex;
@@ -1220,12 +1217,13 @@ html, body, #root {
   justify-content: center;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-xs) var(--space-sm);
+  padding: 1px var(--space-sm);
   border-top: 1px solid var(--border-subtle);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   color: var(--text-tertiary);
   letter-spacing: 0.03em;
+  line-height: 1.2;
 }
 
 .status-bar__version {
@@ -2672,12 +2670,6 @@ html, body, #root {
   font-weight: 700;
   letter-spacing: 0.18em;
   color: var(--accent-cyan);
-}
-
-.pulse__banner-tagline {
-  font-size: var(--fs-xs);
-  color: var(--text-secondary);
-  letter-spacing: 0.04em;
 }
 
 .pulse__banner-stats {

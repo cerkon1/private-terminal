@@ -280,7 +280,6 @@ export default function PulseDashboard({ onSelectSection }: Props) {
       <div className="pulse__banner">
         <div className="pulse__banner-title">
           <span className="pulse__banner-name">PULSE</span>
-          <span className="pulse__banner-tagline">your universe · right now vs the last 5 years</span>
         </div>
         <div className="pulse__banner-stats">
           <span><strong>{counts.total + counts.macro}</strong> rows</span>
@@ -336,17 +335,17 @@ export default function PulseDashboard({ onSelectSection }: Props) {
 
       <div className="pulse__intro">
         <TabIntro
-          subtitle="Where each ticker and macro series in your universe sits today vs its own 5-year range, expressed as percentile-rank cells. Greens mean &ldquo;high vs history,&rdquo; reds mean &ldquo;low,&rdquo; middle values mean &ldquo;normal.&rdquo;"
           howToRead={
             <>
               <ul>
-                <li>Each cell shows the current value's percentile rank within the last five years of that ticker's own history. A green LEVEL cell at 95 means today's price is in the top 5% of the last five years; a red RSI cell at 12 means RSI is in the bottom 12%.</li>
-                <li>REGIME = SMMA Ribbon current state (the chip color follows your Settings → Appearance palette). AGE = days since the most recent regime flip — long age = mature trend, short = fresh.</li>
+                <li>Each cell shows a percentile rank against the ticker's own last 5 years of history. A green LEVEL cell at 95 means today's price is higher than 95% of the last 5 years' closes; a red RSI cell at 12 means RSI is lower than 88% of historical RSI values.</li>
+                <li>REGIME = current SMMA Ribbon state. Chip color follows your Settings → Appearance palette.</li>
+                <li>AGE = days since the most recent regime flip. Long age = mature trend; short = fresh.</li>
                 <li>DD is a signed % drawdown from the 5-year running peak — not a percentile. -22% means the asset is 22% below its 5-year high.</li>
                 <li>Rows tagged with <span className="pulse__partial-mark">*</span> have less than a year of history; the percentile is computed against the available range. Rows greyed out have no bars yet — refresh that section.</li>
-                <li>Scan for cells at saturation. Greens at 90+ or reds at 10- are where stories develop.</li>
+                <li>Scan for cells at saturation. Greens at 90+ or reds at ≤10 are where stories develop.</li>
                 <li>Universe-wide patterns matter. If half the RSI column is red, that's a market-wide cool-off, not a ticker-specific signal.</li>
-                <li>Sortable by any column. Click a row to open that ticker's chart. (Pending — wired in a follow-up.)</li>
+                <li>Sortable by AGE, LEVEL, RSI, ATR, VOL, DD. Click a ticker to open its chart.</li>
               </ul>
             </>
           }
