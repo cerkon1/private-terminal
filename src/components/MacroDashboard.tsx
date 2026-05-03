@@ -53,6 +53,18 @@ export default function MacroDashboard({ onDataChanged, onSelectSection }: Props
     fetchTiles(false).then(data => {
       if (cancelled || !data) return;
       setTiles(data);
+      // Ctrl+K command palette → MACRO chart handoff. Palette writes the
+      // target series_id to localStorage before flipping section to MACRO;
+      // here we read + clear it once tiles load and auto-`setSelected` so
+      // the chart pops open. Always-clear-on-mount even if the series
+      // isn't found, so a stale handoff can't hijack later navigation
+      // (S22 — same shape as the S21 Pulse → TickerDashboard handoff).
+      const handoff = localStorage.getItem('session.macro_chart_handoff');
+      if (handoff) {
+        localStorage.removeItem('session.macro_chart_handoff');
+        const match = data.find((t) => t.seriesId === handoff);
+        if (match) setSelected(match);
+      }
       onDataChanged?.();
     });
     return () => {

@@ -9,9 +9,11 @@ import MarketHoursStrip from './components/MarketHoursStrip';
 import NewsDashboard from './components/NewsDashboard';
 import PulseDashboard from './components/pulse/PulseDashboard';
 import SettingsModal from './components/SettingsModal';
+import CommandPalette from './components/shell/CommandPalette';
 import Sidebar from './components/Sidebar';
 import StatusBar from './components/StatusBar';
 import TickerDashboard from './components/TickerDashboard';
+import { useCommandSearchables } from './hooks/useCommandSearchables';
 import { usePersistedState } from './hooks/usePersistedState';
 import { useThemeColors } from './hooks/useThemeColors';
 import { SectorGroup } from './types/sector';
@@ -26,6 +28,7 @@ export default function App() {
   const [groupsVersion, setGroupsVersion] = useState(0);
   const [manageOpen, setManageOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [themeColors, setThemeColors] = useThemeColors();
   const bumpDb = () => setDbRefreshCounter(c => c + 1);
   const reloadGroups = () => setGroupsVersion(v => v + 1);
@@ -54,11 +57,28 @@ export default function App() {
     reloadGroups();
   };
 
+  // Ctrl+K (Cmd+K on Mac) opens the command palette globally — works
+  // even from inside form inputs, matching VS Code / Linear / Slack
+  // convention. The palette's own Esc handler closes it. (S22)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const { searchables } = useCommandSearchables(groups, setActiveSection);
+
   return (
     <div className="app-shell">
       <AppHeader
         refreshTrigger={dbRefreshCounter}
         onSettingsOpen={() => setSettingsOpen(true)}
+        onPaletteOpen={() => setPaletteOpen(true)}
       />
       <MarketHoursStrip />
       <div className="app-body">
@@ -92,6 +112,11 @@ export default function App() {
           setThemeColors={setThemeColors}
         />
       )}
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        searchables={searchables}
+      />
     </div>
   );
 }

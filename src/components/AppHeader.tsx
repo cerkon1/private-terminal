@@ -7,9 +7,13 @@ type Props = {
   /** Incremented by the app after a data refresh so we re-read DB stats. */
   refreshTrigger: number;
   onSettingsOpen: () => void;
+  /** Opens the Ctrl+K command palette (S22). Same modal that the
+   *  global keybinding triggers — exposes it visually for users who
+   *  haven't picked up the shortcut yet. */
+  onPaletteOpen: () => void;
 };
 
-export default function AppHeader({ refreshTrigger, onSettingsOpen }: Props) {
+export default function AppHeader({ refreshTrigger, onSettingsOpen, onPaletteOpen }: Props) {
   const [info, setInfo] = useState<DbInfo | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -42,14 +46,24 @@ export default function AppHeader({ refreshTrigger, onSettingsOpen }: Props) {
     <header className="app-header">
       <div className="app-header__top-row">
         <h1 className="app-title">PRIVATE TERMINAL</h1>
-        <button
-          type="button"
-          className="app-header__settings"
-          onClick={onSettingsOpen}
-          title="Settings"
-        >
-          ⚙
-        </button>
+        <div className="app-header__actions">
+          <button
+            type="button"
+            className="app-header__icon-btn app-header__icon-btn--palette"
+            onClick={onPaletteOpen}
+            title="Search across the app (Ctrl+K)"
+          >
+            ⌘K
+          </button>
+          <button
+            type="button"
+            className="app-header__icon-btn"
+            onClick={onSettingsOpen}
+            title="Settings"
+          >
+            ⚙
+          </button>
+        </div>
       </div>
       <div className="app-header__sub-row">
         {info ? (

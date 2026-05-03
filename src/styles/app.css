@@ -575,6 +575,161 @@ html, body, #root {
 /* AVWAP click-to-anchor hint — surfaces only when the toggle is on but
    no anchor is set. Pinned center-top of the chart so it's visible
    without obscuring the price action. */
+/* Ctrl+K command palette (S22). Spotlight-style positioning: top-anchored
+   ~12vh from the viewport top instead of dead-center, so muscle memory
+   from VS Code / Linear / Slack carries over. Same z-stack tier as other
+   modals; not stacked on top of them — pressing Ctrl+K with another
+   modal open is a no-op for v1 (acceptable). */
+.cmdp-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  z-index: 100;
+}
+
+/* Elevate above --bg-surface so the modal reads as a distinct surface
+   above the dark chart/page behind it. Subtle cyan ring on the border
+   plus a strong drop shadow lifts it off the page. */
+.cmdp {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-emphasis);
+  border-radius: var(--radius-md);
+  width: min(640px, 92vw);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(var(--accent-cyan-rgb), 0.15);
+  font-family: var(--font-mono);
+}
+
+.cmdp__input-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cmdp__icon {
+  color: var(--accent-cyan);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.08em;
+  user-select: none;
+  font-weight: 600;
+}
+
+.cmdp__input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  letter-spacing: 0.02em;
+}
+
+.cmdp__input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.cmdp__results {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--space-xs) 0;
+}
+
+.cmdp__hint {
+  padding: var(--space-lg);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.cmdp__group {
+  padding: var(--space-xs) 0;
+}
+
+.cmdp__group-label {
+  padding: var(--space-xs) var(--space-lg);
+  color: var(--text-tertiary);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.cmdp__row {
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  padding: var(--space-xs) var(--space-lg);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  border-left: 2px solid transparent;
+}
+
+.cmdp__row--active {
+  background: rgba(var(--accent-cyan-rgb), 0.1);
+  border-left-color: var(--accent-cyan);
+}
+
+.cmdp__primary {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cmdp__secondary {
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cmdp__tertiary {
+  color: var(--text-tertiary);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.cmdp__footer {
+  padding: var(--space-xs) var(--space-lg);
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+}
+
+.cmdp__footer kbd {
+  background: rgba(var(--text-tertiary-rgb), 0.12);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  padding: 1px 6px;
+  margin: 0 2px;
+  font-family: inherit;
+  font-size: 0.95em;
+}
+
 .feature-chart__avwap-hint {
   position: absolute;
   top: 44px;
@@ -1423,25 +1578,44 @@ html, body, #root {
 }
 
 /* ── Settings modal ─────────────────────────── */
-.app-header__settings {
+
+/* Header right-side action cluster — Ctrl+K palette button + gear icon
+   (S22). Wrapper handles margin-left:auto so individual buttons stay
+   layout-agnostic. */
+.app-header__actions {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.app-header__icon-btn {
   background: transparent;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   cursor: pointer;
-  width: 32px;
   height: 28px;
-  font-size: 16px;
+  min-width: 32px;
+  padding: 0 var(--space-xs);
+  font-family: var(--font-mono);
+  font-size: 14px;
   line-height: 1;
+  letter-spacing: 0.04em;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.app-header__settings:hover {
+.app-header__icon-btn:hover {
   color: var(--accent-cyan);
   border-color: var(--accent-cyan);
+}
+
+.app-header__icon-btn--palette {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 0 var(--space-sm);
 }
 
 .modal--wide {

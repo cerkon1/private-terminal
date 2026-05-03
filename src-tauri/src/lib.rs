@@ -47,6 +47,7 @@ pub fn run() {
             commands::macro_cmds::list_macro_tiles,
             commands::macro_cmds::get_fred_history,
             commands::sector_cmds::list_sector_groups,
+            commands::sector_cmds::list_palette_tickers,
             commands::ticker_cmds::list_ticker_tiles,
             commands::ticker_cmds::get_ticker_history,
             commands::ticker_cmds::list_market_index_quotes,
