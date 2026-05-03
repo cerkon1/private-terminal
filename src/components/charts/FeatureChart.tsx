@@ -530,6 +530,22 @@ function buildCandlestickOption({
           baseAxis.min = indBounds.min;
           baseAxis.max = indBounds.max;
         }
+        // ATR-style auto-fit subpanes: hide the boundary min/max labels (they
+        // echo the raw padded float bounds — long strings that blow out the
+        // y-axis gutter and indent the pane vs price/volume above) and apply
+        // a bounded-decimal formatter so any auto-step ticks read cleanly.
+        baseAxis.axisLabel = {
+          color: theme.textSecondary,
+          fontSize: 10,
+          showMinLabel: false,
+          showMaxLabel: false,
+          formatter: (v: number) => {
+            const abs = Math.abs(v);
+            if (abs >= 100) return v.toFixed(0);
+            if (abs >= 10) return v.toFixed(1);
+            return v.toFixed(2);
+          },
+        };
       }
     }
     return baseAxis;
@@ -787,10 +803,27 @@ function buildCandlestickOption({
     topPct: parseFloat(priceGrid.top) + parseFloat(priceGrid.height) / 2,
   };
 
+  // Corner labels for non-price panes — VOL / DD / RSI / ATR badge in
+  // the top-left of each subpane. Pane identification at a glance.
+  const cornerLabels: any[] = [];
+  if (volumePaneIndex >= 0 && grids[volumePaneIndex]) {
+    cornerLabels.push(cornerLabelGraphic('VOL', grids[volumePaneIndex]));
+  }
+  if (drawdownPaneIndex >= 0 && grids[drawdownPaneIndex]) {
+    cornerLabels.push(cornerLabelGraphic('DD', grids[drawdownPaneIndex]));
+  }
+  subpaneIndicators.forEach((ind, i) => {
+    const gridIdx = subpaneStartIndex + i;
+    if (grids[gridIdx]) {
+      const label = ind.id.split('_')[0].toUpperCase();
+      cornerLabels.push(cornerLabelGraphic(label, grids[gridIdx]));
+    }
+  });
+
   return {
     backgroundColor: 'transparent',
     textStyle: { fontFamily: 'JetBrains Mono, Consolas, monospace', color: theme.textPrimary },
-    graphic: watermarkGraphic(title, 96, watermarkCenter),
+    graphic: [watermarkGraphic(title, 96, watermarkCenter), ...cornerLabels],
     tooltip: {
       show: true,
       showContent: tooltipVisible,
@@ -812,6 +845,14 @@ function buildCandlestickOption({
     legend: {
       show: overlayIndicators.length + subpaneIndicators.length > 0,
       top: 2,
+      left: 8,
+      // Reserve right-side no-fly zone for the absolute-positioned HTML
+      // toolbar (AUTO Y / VOL / VRVP / DD / AVWAP / PNG ≈ 316px + 28px right
+      // offset). Without this the legend flows full-width and runs under the
+      // toolbar buttons when many indicators are on (SMMA Ribbon + RSI + ATR
+      // = 6 series). Default `type: 'plain'` wraps to a second row when
+      // constrained — preferred over scroll arrows for at-a-glance reading.
+      right: 360,
       textStyle: { color: theme.textSecondary, fontSize: 10 },
       // Force rectangular icons so stacked-area series (lineStyle.opacity=0)
       // don't render as invisible/gray swatches — the rect icon picks up
@@ -845,12 +886,15 @@ function buildCandlestickOption({
         start: visibleRange.start,
         end: visibleRange.end,
         bottom: 4,
-        height: 20,
+        height: 26,
         backgroundColor: theme.zoomBg,
         fillerColor: theme.accentCyanFillSoft,
         borderColor: theme.borderEmphasis,
-        handleStyle: { color: theme.borderEmphasis },
-        textStyle: { color: theme.textSecondary, fontSize: 9 },
+        handleStyle: { color: theme.accentCyan, borderColor: theme.accentCyan },
+        handleSize: '120%',
+        moveHandleSize: 6,
+        emphasis: { handleStyle: { borderColor: theme.accentCyan } },
+        textStyle: { color: theme.textSecondary, fontSize: 10 },
       },
     ],
     series,
@@ -1028,6 +1072,31 @@ function watermarkGraphic(
       fontFamily: 'JetBrains Mono, Consolas, monospace',
       textAlign: 'center' as const,
       textVerticalAlign: 'middle' as const,
+    },
+  };
+}
+
+// Small mono badge pinned to a subpane's top-left corner — VOL / DD /
+// RSI / ATR. Lets users identify the pane at a glance without reading
+// the legend swatch order. Faint colour so it doesn't compete with the
+// data lines/bars.
+function cornerLabelGraphic(text: string, grid: { left: number; top: string }) {
+  const topPct = parseFloat(grid.top);
+  return {
+    type: 'text' as const,
+    left: grid.left + 6,
+    top: `${topPct + 0.5}%`,
+    z: 1,
+    silent: true,
+    style: {
+      text,
+      fill: getChartTheme().textTertiary,
+      fontSize: 11,
+      fontWeight: 600 as const,
+      fontFamily: 'JetBrains Mono, Consolas, monospace',
+      textAlign: 'left' as const,
+      textVerticalAlign: 'top' as const,
+      opacity: 0.6,
     },
   };
 }
