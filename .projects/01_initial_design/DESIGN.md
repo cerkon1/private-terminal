@@ -1,6 +1,16 @@
 # Design Sketch — Private Terminal
 
-v0.13 sketch (2026-05-02). M1–M7 shipped, M8 code-complete, M8.5 Maintenance complete, M8.6 Polish complete, S12 release-blocker pass complete, S13 Manage Watchlist refactor complete, **v1.0.0-rc.1 shipped to first cold-eye tester**, v1.1 Analysis section Phase 1-3 shipped, v1.2 Pulse killer-feature shipped (S20 design + S20 database reformulation + S21 implementation), Scanner deprecated (S21).
+v0.14 sketch (2026-05-03). M1–M7 shipped, M8 code-complete, M8.5 Maintenance complete, M8.6 Polish complete, S12 release-blocker pass complete, S13 Manage Watchlist refactor complete, **v1.0.0-rc.1 shipped to first cold-eye tester**, v1.1 Analysis section Phase 1-3 shipped, v1.2 Pulse killer-feature shipped (S20 design + S20 database reformulation + S21 implementation), Scanner deprecated (S21), v1.2 UX leverage week shipped (S22 — MACRO-tile retrofit, AVWAP, last_fetch_error, Ctrl+K palette, right-click tile menu, app-wide readability passes). Phase 4 Analysis tools (COT / AAII / VIX term) deferred from v1.2 (S22 user call).
+
+**v0.14 changes (S22):**
+- **Schema column added.** `quote_cache.last_fetch_error TEXT NULL` — persisted per-(ticker, data_source) fetch error. Written on PRIME / quote-refresh failure paths; cleared on success. Idempotent migration. Surfaces in Pulse no-bars rows + TickerDashboard tile ⚠ across sessions without re-PRIMEing.
+- **Feature #3 (Ctrl+K command palette) shipped.** Originally scoped to M9; landed S22 ahead of schedule. Spotlight-style modal, Fuse.js fuzzy match, four navigation surfaces (tickers / sectors / FRED series / Analysis tabs), action closures reuse existing handoff patterns (S21 pulse_feature_chart_target, new S22 macro_chart_handoff + analysis_handoff_tab). Visible `⌘K` button in AppHeader for discoverability.
+- **AVWAP overlay added to FeatureChart.** Toolbar toggle + click-to-anchor on the price pane. Pure frontend math (volume already in `price_history`); no new fetcher, no schema. First **interactive** chart element in the app — uses `chart.getZr().on('click')` ZRender-level click handling so empty-pane gaps register, not just candle clicks. Auto-suppresses for zero-volume tickers (DXY / FX / volumeless indices).
+- **MACRO-tile retrofit (RecProb + FCI dual-surface) shipped.** Closes the S15 Q4 "both surfaces" deferral. `tile_visible = 1` for `RECPROUSM156N` + `NFCI`; click navigates to ANALYSIS section + activates the matching tab via `session.analysis_handoff_tab` localStorage handoff. Shared `<MacroSeriesView>` component NOT built — yak-shaving for two series; cross-link delivers the user value cheaply.
+- **Right-click context menu on TickerDashboard tiles.** Three-item: Add to / Remove from WATCHLIST (mutually exclusive based on live membership), Purge from database (confirm dialog). Backend: `AddTickerInput` extended with optional `data_source` override so right-click "Add to WATCHLIST" passes the tile's actual source (WATCHLIST is seeded `data_source = 'mixed'`).
+- **Phase 4 Analysis tools deferred from v1.2.** User considered COT (Commitments of Traders) as the strongest single tool, then dropped on cost-vs-value: weekend of fetcher / parser / schema / scheduler for a signal that applies to 5 of ~200 tickers. AAII + VIX term also deferred. Spec preserved in `v11_analysis_design.md` Phase 4 section, marked deferred. Don't re-propose without fresh user signal.
+- **App-wide text readability bumps.** Sidebar tactical pass (`text-secondary` → `text-primary` for items, `text-tertiary` → `text-secondary` for parents, weight 400 → 500, tracking pulled in 0.08em → 0.02em / 0.15em → 0.06em). Then app-wide token bump: `--text-secondary` `#9ca3af` → `#b8bdc7` (6.7:1 → 9.4:1 contrast), `--text-tertiary` `#6b7280` → `#8a91a0` (4.4:1 → 6.0:1). Both above WCAG AAA / AA-large. No hue shift. `--status-neutral` + `--state-neutral` deliberately untouched — different semantic roles.
+- **NSIS installer pivot.** Distribution shape moves from portable-exe-only (`bundle.active: false` since S12) to portable + branded NSIS installer. New `src-tauri/LICENSE.txt` (free-personal-use, ~55 lines — load-bearing "decision support not investment advice" clause from CLAUDE.md principle 9 verbatim). Bundle config: `active: true`, `targets: "nsis"` (no MSI), `licenseFile`, `icon` array, `windows.nsis.{headerImage, sidebarImage, installerIcon}`. New 164×314 sidebar BMP + 150×57 header BMP at `src-tauri/installer-{sidebar,header}.bmp` — generated via PowerShell System.Drawing from the existing 512×512 icon source, `#0a0e14` bg, cyan Consolas Bold "PRIVATE / TERMINAL" wordmark. `installerIcon` set explicitly so the setup.exe itself shows our brand (Tauri does NOT auto-inherit from `bundle.icon` for the installer's own icon). Both portable exe and installer ship from the same `tauri build`.
 
 **v0.13 changes (S21):**
 - **v1.2 Pulse implementation shipped.** New top-level Rust module `src-tauri/src/cross_section/` (mod / compute / percentile / tests + `commands/cross_section_cmds.rs`) iterating every leaf sector_group ticker + every FRED series, computing REGIME / AGE / LEVEL / RSI / ATR / VOL / DD via percentile rank vs trailing-5y baseline. Universal indicator compute path bypasses per-ticker `indicator_settings` (cross-section reads break with mixed params). 9/9 cross_section unit tests green.
@@ -180,7 +190,7 @@ Compute on-demand when feature chart opens (not persisted). `f64` precision (dis
 |---|---------|-------------|-----------|
 | **1** | **Multi-ticker overlay** | Compare N tickers as % change from baseline on one chart (BTC/ETH/SPY YTD) | M9 |
 | **2** | **Market-hours indicator** | App-shell strip showing which exchanges are open (NYSE/TSX/LSE/TYO/HKG/SSE/ASX/KRX). Pure timezone math | M3 |
-| **3** | **Command palette (Ctrl+K)** | Fuzzy search across sectors, tickers, FRED series — jump anywhere | M9 |
+| **3** | **Command palette (Ctrl+K)** | Fuzzy search across tickers, sectors, FRED series, Analysis tabs — jump anywhere. **Shipped S22** (ahead of M9; Fuse.js, four-surface aggregator, S21/S22 handoff reuse, visible `⌘K` button in AppHeader). | M9 / **S22** |
 | **4** | **Regime shading** | State-coloured envelope between SMMA Ribbon's v1 and v2 lines (gold/navy/gray). Envelope width = signal strength. Delivered in M6. | M6 |
 | **5** | **Watchlist performance summary** | Sortable table: ticker × 1D/1W/1M/YTD/1Y % change. SQL aggregate on `price_history` | M9 |
 | **6** | **Linked cursor across charts** | Sync crosshair across open feature charts. ECharts `connect()` — one line | M2 |
@@ -473,6 +483,7 @@ CREATE TABLE quote_cache (
   volume_24h        TEXT,
   sparkline_7d      TEXT,
   last_fetched      TEXT,
+  last_fetch_error  TEXT,                    -- S22: persisted per-(ticker, source) fetch error; surfaces bad symbols across sessions
   PRIMARY KEY (ticker, data_source)
 );
 

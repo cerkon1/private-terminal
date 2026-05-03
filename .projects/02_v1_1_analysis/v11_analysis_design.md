@@ -151,7 +151,7 @@ Pure compute on existing data. Adds visual variety without expanding the data la
 
 ## Phase 3 tools — macro regime
 
-**Status:** Phase 3 fully shipped. Recession Prob + FCI shipped lean (S17, 2026-04-30) — Analysis-only, MACRO-tile retrofit deferred. Macro Regime Quadrant shipped (S18, 2026-05-02) — INDPRO YoY × CPI/PCE YoY with baseline-anchored crosshairs, 12/24/36/48-month trail picker. Implementation diverged from the original sketch in two ways worth noting: (a) growth axis chose INDPRO over NAPM for data hygiene (NAPM toggle deferred to v1.2), (b) crosshairs anchored at long-run mean baselines, not 0/0 — US inflation has been positive for decades so 0/0 split would put the entire trail in the upper half. See `00_tracking/memory/s18_regime_quadrant_decisions.md`. Zero new FRED series this phase — all of `RECPROUSM156N` / `NFCI` / `INDPRO` / `CPIAUCSL` / `PCEPILFE` were already seeded by Phase 1's `tile_visible` migration or M2's original FRED batch.
+**Status:** Phase 3 fully shipped + retrofit closed. Recession Prob + FCI shipped lean (S17, 2026-04-30) — Analysis-only initially, with MACRO-tile retrofit deferred. **Retrofit closed S22 (2026-05-03)** via cross-link path rather than the originally-spec'd shared `<MacroSeriesView>` — `tile_visible` flipped on `RECPROUSM156N` + `NFCI`, click on the new MACRO tiles navigates to ANALYSIS section + activates the matching tab through `session.analysis_handoff_tab` localStorage handoff. Shared component NOT built — yak-shaving for two series; cross-link delivers the user value cheaply. Macro Regime Quadrant shipped (S18, 2026-05-02) — INDPRO YoY × CPI/PCE YoY with baseline-anchored crosshairs, 12/24/36/48-month trail picker. Implementation diverged from the original sketch in two ways worth noting: (a) growth axis chose INDPRO over NAPM for data hygiene (NAPM toggle deferred to v1.2), (b) crosshairs anchored at long-run mean baselines, not 0/0 — US inflation has been positive for decades so 0/0 split would put the entire trail in the upper half. See `00_tracking/memory/s18_regime_quadrant_decisions.md`. Zero new FRED series this phase — all of `RECPROUSM156N` / `NFCI` / `INDPRO` / `CPIAUCSL` / `PCEPILFE` were already seeded by Phase 1's `tile_visible` migration or M2's original FRED batch.
 
 Adds three FRED series. Same fetcher path; pure additive seed.
 
@@ -176,6 +176,10 @@ Adds three FRED series. Same fetcher path; pure additive seed.
 ---
 
 ## Phase 4 tools — sentiment / positioning
+
+**Status: deferred from v1.2 (S22).** User considered COT (the strongest of the three for this app's audience — only one with a unique signal not derivative of price) and walked through a full five-decision build plan, then dropped on cost-vs-value: weekend of fetcher / parser / schema / scheduler for a signal that applies to 5 of ~200 tickers. AAII overlaps with widely-available retail-sentiment surveys (CNN Fear & Greed, etc.); VIX term structure is flat / uninteresting most of the time and only fires during stress.
+
+**Spec preserved below for if/when v1.3 picks one up. Don't propose without a fresh user signal.**
 
 Real new data work. Each is its own fetcher module. Schedule like other periodic fetchers.
 
