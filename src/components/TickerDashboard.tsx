@@ -5,6 +5,7 @@ import FeatureChart from './charts/FeatureChart';
 import IndicatorPanel from './IndicatorPanel';
 import RangeSwitch from './RangeSwitch';
 import TickerTile from './TickerTile';
+import TileContextMenu, { type TileMenuItem } from './TileContextMenu';
 import { usePersistedState } from '../hooks/usePersistedState';
 import {
   IndicatorOutput,
@@ -54,6 +55,46 @@ export default function TickerDashboard({
   const [availableIndicators, setAvailableIndicators] = useState<IndicatorRegistration[]>([]);
   const [enabledIds, setEnabledIds] = useState<Set<string>>(new Set());
   const [indicatorOutputs, setIndicatorOutputs] = useState<IndicatorOutput[]>([]);
+
+  // Right-click context menu state (S22). Coordinates come from the tile's
+  // onContextMenu event; ticker is the row the menu is acting on.
+  const [ctxMenu, setCtxMenu] = useState<{
+    tile: TickerTileData;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [purgeCandidate, setPurgeCandidate] = useState<TickerTileData | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionStatus, setActionStatus] = useState<string | null>(null);
+
+  // WATCHLIST membership — Set of ticker symbols currently in the
+  // 'watchlist' top-level group. Drives the Add/Remove menu item swap.
+  // Refetched on mount + after any successful add/remove/purge so the
+  // menu always reflects current state.
+  const [watchlistTickers, setWatchlistTickers] = useState<Set<string>>(new Set());
+  const [watchlistVersion, setWatchlistVersion] = useState(0);
+  const bumpWatchlist = () => setWatchlistVersion((v) => v + 1);
+  useEffect(() => {
+    let cancelled = false;
+    // Reuse list_palette_tickers (S22 Ctrl+K palette) — flat (ticker,
+    // sectorGroupId) rows are exactly the shape needed for membership
+    // testing. One IPC, no new backend.
+    invoke<Array<{ ticker: string; sectorGroupId: string }>>('list_palette_tickers')
+      .then((rows) => {
+        if (cancelled) return;
+        const set = new Set<string>();
+        for (const r of rows) {
+          if (r.sectorGroupId === 'watchlist') set.add(r.ticker);
+        }
+        setWatchlistTickers(set);
+      })
+      .catch(() => {
+        if (!cancelled) setWatchlistTickers(new Set());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [watchlistVersion]);
 
   const fetchTiles = async (force: boolean): Promise<TickerTileData[] | null> => {
     try {
@@ -219,6 +260,109 @@ export default function TickerDashboard({
     }
   };
 
+  // ── Right-click context menu actions (S22) ──────────────────────────
+
+  const flashStatus = (msg: string) => {
+    setActionError(null);
+    setActionStatus(msg);
+    setTimeout(() => setActionStatus(null), 2400);
+  };
+
+  const handleAddToWatchlist = async (tile: TickerTileData) => {
+    try {
+      await invoke('add_ticker', {
+        input: {
+          ticker: tile.ticker,
+          sectorGroupId: 'watchlist',
+          dataSource: tile.dataSource,
+          displayName: tile.displayName ?? null,
+          displayCurrency: tile.displayCurrency ?? null,
+        },
+      });
+      flashStatus(`Added ${tile.ticker} to WATCHLIST`);
+      bumpWatchlist();
+      onDataChanged?.();
+    } catch (e) {
+      setActionError(String(e));
+    }
+  };
+
+  const handleRemoveFromWatchlist = async (tile: TickerTileData) => {
+    try {
+      await invoke('remove_ticker', {
+        ticker: tile.ticker,
+        sectorGroupId: 'watchlist',
+      });
+      flashStatus(`Removed ${tile.ticker} from WATCHLIST`);
+      bumpWatchlist();
+      onDataChanged?.();
+      // If we're currently VIEWING the WATCHLIST sector, the tile just
+      // disappeared from it — refetch so the grid reflects the change.
+      if (sectorGroupId === 'watchlist') {
+        const data = await fetchTiles(false);
+        if (data) setTiles(data);
+      }
+    } catch (e) {
+      setActionError(String(e));
+    }
+  };
+
+  const confirmPurge = async () => {
+    if (!purgeCandidate) return;
+    try {
+      const r = await invoke<{
+        cascaded: boolean;
+        barsDeleted: number;
+        quoteDeleted: boolean;
+        indicatorSettingsDeleted: number;
+        newsItemsDeleted: number;
+      }>('purge_ticker', {
+        ticker: purgeCandidate.ticker,
+        sectorGroupId: purgeCandidate.sectorGroupId,
+        dataSource: purgeCandidate.dataSource,
+      });
+      const sym = purgeCandidate.ticker;
+      if (r.cascaded) {
+        const parts = [`${r.barsDeleted} bars`];
+        if (r.quoteDeleted) parts.push('quote');
+        if (r.indicatorSettingsDeleted > 0)
+          parts.push(`${r.indicatorSettingsDeleted} indicator setting(s)`);
+        flashStatus(`Purged ${sym} · ${parts.join(' · ')}`);
+      } else {
+        flashStatus(`Removed ${sym} from this group · cached data kept`);
+      }
+      setPurgeCandidate(null);
+      bumpWatchlist();
+      onDataChanged?.();
+      const data = await fetchTiles(false);
+      if (data) setTiles(data);
+    } catch (e) {
+      setActionError(String(e));
+    }
+  };
+
+  const buildMenuItems = (tile: TickerTileData): TileMenuItem[] => {
+    const inWatchlist = watchlistTickers.has(tile.ticker);
+    const items: TileMenuItem[] = [];
+    if (inWatchlist) {
+      items.push({
+        label: 'Remove from WATCHLIST',
+        onClick: () => handleRemoveFromWatchlist(tile),
+      });
+    } else {
+      items.push({
+        label: 'Add to WATCHLIST',
+        onClick: () => handleAddToWatchlist(tile),
+      });
+    }
+    items.push({
+      label: 'Purge from database…',
+      variant: 'destructive',
+      onClick: () => setPurgeCandidate(tile),
+    });
+    return items;
+  };
+
   const chartBars = useMemo(() => history?.bars ?? [], [history]);
   const themedIndicators = useMemo(
     () => applyThemeToIndicators(indicatorOutputs, themeColors),
@@ -313,9 +457,71 @@ export default function TickerDashboard({
             heatmap={viewMode === 'heatmap'}
             activeRange={activeRange}
             onClick={setSelected}
+            onContextMenu={(tile, e) =>
+              setCtxMenu({ tile, x: e.clientX, y: e.clientY })
+            }
           />
         ))}
       </section>
+      {ctxMenu && (
+        <TileContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          items={buildMenuItems(ctxMenu.tile)}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
+      {purgeCandidate && (
+        <div className="modal-backdrop" onClick={() => setPurgeCandidate(null)}>
+          <div
+            className="modal modal--narrow"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal__header">
+              <h2 className="modal__title">Purge from database?</h2>
+            </div>
+            <div className="modal__body">
+              <p>
+                This will hard-delete <code>{purgeCandidate.ticker}</code> from
+                the current group. If this is the last visible occurrence of
+                this ticker anywhere, cached bars + indicator settings will
+                cascade-drop too.
+              </p>
+              <p style={{ color: 'var(--text-tertiary)' }}>
+                Cannot be undone. The ticker can be re-added via Manage
+                Watchlist or by right-clicking a tile in another group.
+              </p>
+            </div>
+            <div className="modal__footer">
+              <button
+                type="button"
+                className="view-toggle"
+                onClick={() => setPurgeCandidate(null)}
+              >
+                CANCEL
+              </button>
+              <button
+                type="button"
+                className="view-toggle view-toggle--destructive"
+                onClick={confirmPurge}
+              >
+                PURGE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {(actionStatus || actionError) && (
+        <div
+          className={`tile-action-toast ${actionError ? 'tile-action-toast--error' : ''}`}
+          onClick={() => {
+            setActionStatus(null);
+            setActionError(null);
+          }}
+        >
+          {actionError ?? actionStatus}
+        </div>
+      )}
     </div>
   );
 }

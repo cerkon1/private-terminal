@@ -73,6 +73,13 @@ pub struct AddTickerInput {
     pub sector_group_id: String,
     pub display_name: Option<String>,
     pub display_currency: Option<String>,
+    /// Optional explicit data_source override. When None, falls back to the
+    /// parent sector_group's data_source (existing behavior). When Some,
+    /// trusted as-is — used by S22 right-click "Add to WATCHLIST" because
+    /// WATCHLIST.data_source = 'mixed' (a routing label, not a fetcher key);
+    /// the per-tile data_source carries the actual fetcher.
+    #[serde(default)]
+    pub data_source: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -168,8 +175,10 @@ pub async fn add_ticker(
 
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
-    // Inherit data_source from the parent group. Also validates group exists.
-    let data_source: String = db
+    // Validate the group exists and grab its data_source as the default.
+    // Caller-provided override (S22 right-click "Add to WATCHLIST") wins —
+    // WATCHLIST.data_source is 'mixed' which isn't a real fetcher key.
+    let group_source: String = db
         .connection()
         .query_row(
             "SELECT data_source FROM sector_groups WHERE id = ?1 AND user_hidden = 0",
@@ -177,6 +186,13 @@ pub async fn add_ticker(
             |r| r.get(0),
         )
         .map_err(|_| format!("sector group '{}' not found or hidden", sector_group_id))?;
+    let data_source = input
+        .data_source
+        .as_deref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .unwrap_or(group_source);
 
     // Compute next display_order within the group. Two-query flow avoids
     // subquery-in-VALUES edge cases.

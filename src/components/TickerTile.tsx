@@ -11,6 +11,9 @@ type Props = {
   heatmap?: boolean;
   activeRange?: TileRange;
   onClick?: (tile: TickerTileData) => void;
+  /** Right-click handler — receives the tile + the click event so the
+   *  parent can position a context menu at clientX/clientY (S22). */
+  onContextMenu?: (tile: TickerTileData, e: React.MouseEvent) => void;
 };
 
 export default function TickerTile({
@@ -18,6 +21,7 @@ export default function TickerTile({
   heatmap = false,
   activeRange = '1D',
   onClick,
+  onContextMenu,
 }: Props) {
   // 1D keeps the abs + pct format (driven by Yahoo's quote_cache). Non-1D
   // ranges are derived from price_history pct-only; show just the percent.
@@ -35,6 +39,11 @@ export default function TickerTile({
       type="button"
       className={`macro-tile macro-tile--button ${heatmapClass}`}
       onClick={() => onClick?.(tile)}
+      onContextMenu={(e) => {
+        if (!onContextMenu) return;
+        e.preventDefault();
+        onContextMenu(tile, e);
+      }}
     >
       <div className="macro-tile__series-id">
         {tile.ticker}
