@@ -1,6 +1,8 @@
 # Progress Log — Private Terminal
 
 ## Current Focus
+**S23 (2026-05-03) — Project 04 Phase 1 implementation, same-day follow-up to S22.** Tester returned diagnostic screenshots within hours of S22 (resolution 2256×1504 @ 200% Windows scaling → effective 1128×752 CSS px; 7 screenshots in `.projects/04_responsive_density/test_user_screenshots/`). Ran the responsive-density Phase 1 plan and **shipped well beyond the original Phase 1 scope** — 12 distinct edits across chart / header / footer / Pulse / Analysis / MarketHoursStrip — reclaiming **~100–130px app-wide** before any `@media` gating. Chart-pane quality wins shipped alongside: ECharts legend collision fix (`right: 360` toolbar zone), dataZoom slider visibility (h: 26 / cyan handles / `handleSize: 120%`), ATR pane indentation fix (hide boundary min/max labels + bounded-decimal formatter), subpane corner labels (faint `VOL` / `DD` / `RSI` / `ATR` top-left badges via new `cornerLabelGraphic` helper), AppHeader collapsed 2→1 row, StatusBar tightened in place, FeatureChart liability footer nuked (principle 9 still satisfied via Features-tab card), MarketHoursStrip dropped time field, Pulse banner tagline + TabIntro subtitle removed, Analysis tab labels shortened (`Recession Prob → Recession`, `Financial Conditions → FCI`, `Regime Quadrant → Regime`) so 7-tab strip fits one row at constrained widths. Pulse "How to read this" copy rewrite fixed three stale/wrong bullets (whole-row click → ticker click; "Pending — wired in a follow-up" → shipped in S21; "any column" → actually-sortable list). `TabIntro.subtitle` made optional. `analysis_tools.display_name` migration via idempotent UPDATE statements at boot — no schema change, existing DBs auto-rename. **Phase 2 (auto-detect `@media (max-height)`) and Phase 3 (Settings density toggle) explicitly deferred** until tester re-tests the rebuilt app — Phase 1 reclaim already exceeded the design-doc estimate, may have removed the need for further phases entirely. Uncommitted at session-end: 8 files modified, 2 untracked dirs in `.projects/`. **Next session entry point: build NSIS installer (per S22 setup), ship to tester, await re-test feedback**. RC1 tester feedback on the rc.1 build itself still pending on parallel track. See `memory/s23_responsive_density_phase1_decisions.md`.
+
 **S22 (2026-05-03) — UX leverage week + installer pivot + screen-density project scoped.** 11 commits shipped on master. One bug fix (watermark horizontal centering on candlestick view), five user-facing features (MACRO-tile retrofit for RecProb + FCI with Analysis cross-link, Anchored VWAP overlay with click-to-anchor, persisted per-ticker `last_fetch_error`, Ctrl+K command palette with fuzzy search, right-click context menu on tiles for WATCHLIST + purge), two readability passes (sidebar tactical fix → app-wide token brightness bump), and the **NSIS installer pivot** (flipped `bundle.active: false → true`, authored free-personal-use LICENSE.txt, generated 164×314 sidebar + 150×57 header BMPs from the existing icon source, set `installerIcon` so the setup.exe itself uses our brand). Theme: every commit closed a known wart or shipped a "should have always been there" UX win. No backend architectural shifts; v1.2 now feels like a coherent product layer over the v1.0 / v1.1 core, AND the distribution shape moved from portable-exe-only to portable-exe + branded NSIS installer. Phase 4 Analysis tools (COT / AAII / VIX term) **explicitly deferred from v1.2** after user weighed COT against alternatives. End-of-session tester feedback flagged screen-density issues (Pulse table only ~25% vertical, dataZoom barely visible) → new project at `.projects/04_responsive_density/design.md` scoped with three-phase plan; **next session entry point: bring tester's screen resolution + Windows display scaling values + 2-3 screenshots** so Phase 1 can target precisely. v1.2 priority queue thinned: other highest-leverage items remain (Vol Cone / Return Distribution / Seasonality FeatureChart enhancements, CoinGecko fetcher, true log Y-axis), but project 04 takes priority because tester feedback is current and concrete. RC1 tester feedback on the rc.1 build itself still pending on the parallel track. See `memory/s22_decisions.md`.
 
 **S21 (2026-05-02) — Pulse killer-feature implementation + Scanner deprecation, shipped on master.** Visual prototype → real backend (`cross_section/` Rust module + IPC + 9 unit tests) → ticker-column-click navigation with auto-open feature chart via localStorage handoff → Scanner subsumed by Pulse (PRIME button moved to Pulse banner contextually, RECOMPUTE killed as dead weight, Scanner soft-deleted via `user_hidden=1`). PRIME failures now surface inline below the banner with per-ticker error rows + exchange-suffix hint. Light theme considered + deferred (S15 token markers are structural readiness only; real light theme is a separate 2-session arc, no demand signal yet, dark "marketing-cool" identity preserved). Master ended at `654a0b4` after the session-end docs commit.
@@ -20,6 +22,75 @@
 **v1.2 priority queue (post-S22):** FeatureChart enhancements still standing — Vol Cone / Return Distribution / Seasonality heatmap (each ~1 evening) → multi-anchor AVWAP (extend single-anchor S22 work) → CoinGecko fetcher → bull/bear VRVP split → true log mode (Path a — manual `log10()`) → multi-ticker overlay chart (M9 feature #1, only M9 carry-over still standing — Ctrl+K shipped S22) → light theme (2-session arc; queue post-RC1 only if feedback surfaces it) → code signing → Scanner.tsx + scanner_snapshot IPC deletion (v1.3 cleanup). **Phase 4 Analysis tools (COT / AAII / VIX term) deferred from v1.2** — user weighed COT (the strongest of the three) and dropped: weekend of fetcher / parser / schema / scheduler for a signal that applies to 5 of ~200 tickers; lopsided ratio against cheaper alternatives. Don't re-propose without a fresh user signal. **Shipped this session and crossed off the queue:** MACRO-tile retrofit for RecProb/FCI (cross-link path, not shared component), persisted `last_fetch_error`, Anchored VWAP, Ctrl+K palette, right-click context menu on tiles, sidebar + token readability passes.
 
 **Indicator naming note:** the quad-SMMA-state indicator was originally seeded as "Larsson Line" (trendscope's label). During S7 we renamed to **SMMA Ribbon** after confirming from the originator's own Medium post that the math is derivative of public community work, not his invention. Session logs below keep the original "Larsson" references as a historical record — code, DB seed, UI text, and `CLAUDE.md`/`DESIGN.md` use "SMMA Ribbon" going forward. See `memory/m6_indicator_rename.md`.
+
+### S23 — Project 04 Phase 1 implementation (2026-05-03)
+
+Same-day follow-up to S22. Tester returned diagnostic info + 7 screenshots within hours; built Phase 1 of responsive-density adaptation against actual ground truth. **Uncommitted at session-end** — 8 modified files awaiting commit + tester rebuild + ship. Decisions captured in `memory/s23_responsive_density_phase1_decisions.md`.
+
+**Tester diagnostics locked.** Display 2256×1504 @ 200% Windows scaling → **effective 1128×752 CSS px** (Surface-class hi-DPI 3:2 panel, common consumer setup). Confirms `@media (max-height: 800px)` would be the right Phase 2 threshold. Screenshots in `.projects/04_responsive_density/test_user_screenshots/`:
+- `165310` — Display Settings panel showing 200% scale (diagnostic source)
+- `165413` — US Equities Energy tile dashboard (chrome inventory)
+- `165440` — XOM FeatureChart, no indicators (dataZoom slider pain confirmed)
+- `165500` — Pulse, ~5 data rows visible above fold (banner is biggest single offender)
+- `165539` — Analysis Pairs tab (revealed 7-tab strip wrap, not in design doc)
+- `165619` — News (acceptable)
+- `165701` — AAPL with SMMA + RSI + ATR all on (worst case: candles squished, legend collision, ATR indented)
+
+**Edits shipped (12 across 8 files).**
+
+| # | File | Change |
+|---|---|---|
+| 1 | `FeatureChart.tsx:812` | Legend `right: 360` no-fly zone for absolute-positioned HTML toolbar |
+| 2 | `FeatureChart.tsx:847` | DataZoom slider h: 20 → 26, handles `borderEmphasis` → `accentCyan`, `handleSize: 120%`, label fontSize 9 → 10 |
+| 3 | `TickerDashboard.tsx:417` + `app.css:1022` | Removed `feature-chart-pane__liability` div + orphan CSS rule (~25-30px reclaim every chart). Principle 9 satisfied via Features-tab card |
+| 4 | `AppHeader.tsx:46` + `app.css:58` | Collapsed 2-row → 1-row layout: title · meta-block (path/size/series/bars, ellipses on overflow) · actions cluster. New `.app-header__meta` with `flex: 1 1 0; min-width: 0; overflow: hidden`; `.app-header__meta-item` with `flex-shrink: 0` so size/series/bars don't compress (path is the only ellipses target) |
+| 5 | `app.css:1210` | StatusBar padding `var(--space-xs) var(--space-sm)` → `1px var(--space-sm)`, added `line-height: 1.2` (~6-8px reclaim) |
+| 6 | `FeatureChart.tsx:521` | ATR/non-RSI subpane axisLabel: `showMinLabel: false, showMaxLabel: false` + magnitude-aware formatter (≥100 → 0 dp, ≥10 → 1 dp, else 2). Boundary labels were echoing raw padded float bounds (`11.211409976946877`), blowing out the y-axis gutter and indenting that pane vs price/volume above |
+| 7 | `MarketHoursStrip.tsx:130` | Dropped `<span className="market-chip__time">` element. Time stays in chip's hover tooltip. Chip ~150px → ~135px; still wraps 6+2 on tester but lighter |
+| 8 | `PulseDashboard.tsx:283` + `app.css:2675` | Removed `pulse__banner-tagline` "your universe · right now vs the last 5 years" + orphan CSS rule (~16-18px reclaim) |
+| 9 | `TabIntro.tsx:5` | `subtitle: string` → `subtitle?: string`. Conditional `{subtitle && <p>}` render. Backwards-compatible — 7 Analysis tabs unchanged |
+| 10 | `PulseDashboard.tsx:337` | Dropped `subtitle="..."` prop from Pulse `<TabIntro>` (~30-40px reclaim — biggest single Pulse win). `How to read this` + `The math` collapsibles still available |
+| 11 | `PulseDashboard.tsx:341-349` | "How to read this" rewrite — 7 → 8 bullets. Bug fixes: whole-row click → ticker click, removed stale "(Pending — wired in a follow-up)" parenthetical (S21 shipped it), "any column" → actually-sortable list (`AGE / LEVEL / RSI / ATR / VOL / DD`). REGIME and AGE split into separate bullets. `10-` → `≤10`. Percentile-rank phrasing tightened: "today's price is in the top 5% of the last 5 years" (ambiguous — top-5%-of-time vs top-5%-of-values) → "today's price is higher than 95% of the last 5 years' closes" |
+| 12 | `seed.sql:454-471` | `analysis_tools.display_name`: `Recession Prob → Recession`, `Financial Conditions → FCI`, `Regime Quadrant → Regime`. INSERT OR IGNORE updated for fresh installs + 3 idempotent UPDATE statements at end of seed for existing DBs (runs every boot). Frontend tab strip math: ~1044px → ~750px estimated, fits single row at tester's 880-908px content area |
+| — | `FeatureChart.tsx:1062` (helper) + `:801` (wiring) | New `cornerLabelGraphic(text, grid)` — small mono badge top-left of each subpane, fontSize 11, `textTertiary` fill at opacity 0.6, `silent: true`. Wired for VOL / DD / each subpaneIndicator (id-split-uppercase). `graphic` changed from single object → array `[watermark, ...cornerLabels]` |
+
+**Key in-session decisions / course corrections.**
+- **Liability footer nuke approved by user** ("Nuke it reclaim the vertical space for the chart"). My initial three-option proposal (α conditional / β static-compress / γ CSS-only) replaced by destructive nuke. Principle 9 obligation discharged via the Features-tab card surface (S19 work) — chart no longer carries it as default chrome.
+- **StatusBar tightened in-place, not nuked** ("This is BIG - it's why we're fucking building the app - nobody looks at the about in settings"). User explicitly elevated cross-promo to load-bearing brand identity. Tightened padding only; font-size, letter-spacing, and copy preserved.
+- **MarketHoursStrip — time-only drop, no further tightening.** User said "Maybe we lost the time only" then "Leave it" when I flagged the strip still wraps. Wrapped state accepted; strip integrity preserved.
+- **Phase 2 / Phase 3 deferred** after honest reassessment. Phase 1 reclaim (~100-130px app-wide for everyone) already exceeded design-doc estimates; the marginal Phase 2 win (~50-70px only on small screens) is real but smaller than what we just shipped. Phase 3 (Settings density toggle) carries a "test at three densities" tax on every future feature — not worth speculative build. Both deferred until tester re-tests the rebuilt app.
+- **Pulse "How to read this" review surfaced 3 stale bullets.** User asked "Is there room for clarity here?" — diagnosed three factual bugs from S21 lineage drift (whole-row click was wrong, "Pending" parenthetical was stale, "any column" was overstated). Fixed in same edit alongside clarity wins.
+- **Subpane labeling: corner labels (β), not center watermarks (α).** User asked about feasibility, requested top-left placement. Honest argument made for β over α: subpanes typically 50-80px tall — center watermark either too small to read or fights the data lines. Big-center-on-price + small-corner-on-subpanes is the Bloomberg/TradingView convention; visual asymmetry is feature, not bug.
+- **DataZoom slider initial overshoot.** First pass set h: 32; user reported "a little too thick"; dialed to 26 (midpoint between original 20 and bumped 32).
+- **Double-click extreme-jump on dataZoom — declined.** User asked if I recommended; honest answer "no" (hidden affordance + ECharts canvas-level event hacking for ~30-40 LOC of pixel math; better paths exist via range-pill toolbar / Home/End keys / RESET button). User dropped it.
+
+**Cumulative reclaim estimate:**
+| Surface | Reclaim |
+|---|---|
+| AppHeader | ~24px (every view) |
+| StatusBar | ~6-8px (every view) |
+| Liability footer | ~25-30px (every chart) |
+| Pulse banner tagline | ~16-18px (Pulse) |
+| Pulse subtitle | ~30-40px (Pulse) |
+| Analysis tab strip wrap fix | ~28-32px (Analysis) |
+| MarketHoursStrip time-drop | ~3-5px (every view, partial — chip-internal not wrap-row) |
+| **Total** | **~130-160px on tester's most-affected surfaces** |
+
+**Build artifacts.**
+- 8 modified files, no commits. `tsc --noEmit` clean after every edit (verified with `npx tsc --noEmit; echo EXIT=$?` returning EXIT=0 each time).
+- No Rust changes. No schema changes. No new dependencies.
+- New helpers added: `cornerLabelGraphic` (FeatureChart.tsx).
+- New CSS class: `.app-header__meta`, `.app-header__meta-item`. Removed: `.app-header__top-row`, `.app-header__sub-row`, `.feature-chart-pane__liability`, `.pulse__banner-tagline`.
+- No tests touched (existing unit tests untouched — 9/9 cross_section + 20/20 analysis still expected to pass).
+
+**Next session entry point.**
+- Commit S23 work in one or more conventional-commit chunks (chart polish / chrome trim / Pulse copy / analysis labels are natural seams).
+- Build NSIS installer per S22 config (`npm run tauri:build` produces both portable + installer additively).
+- Ship to tester, get fresh re-test feedback.
+- If tester still reports cramped views → Phase 2 next (auto-detect `@media (max-height: 800px)` block hiding MarketHoursStrip + StatusBar + tightening Pulse row 26→22px). If satisfied → close project 04 and return to v1.2 priority queue (Vol Cone / Return Distribution / multi-anchor AVWAP / CoinGecko fetcher).
+- Phase 3 (Settings density toggle) deferred indefinitely — has not been justified by user re-test signal yet.
+
+---
 
 ### S22 — UX leverage week (2026-05-03)
 
