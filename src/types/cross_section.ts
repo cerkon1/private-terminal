@@ -23,6 +23,10 @@ export interface CrossSectionRow {
   vol: number | null;
   /** Signed % drawdown (e.g. -22.4). 0 = at peak. Macro rows null. */
   ddPct: number | null;
+  /** Persistent fetch-error message from `quote_cache.last_fetch_error`,
+   *  surfaced inline next to greyed (noBars) rows. Macro rows always null
+   *  (FRED has its own fetch_error path on `fred_series`). S22. */
+  lastFetchError: string | null;
 }
 
 export interface CrossSectionSection {

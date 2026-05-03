@@ -69,6 +69,12 @@ pub struct CrossSectionRow {
     pub vol: Option<f64>,
     /// Signed % drawdown from trailing-5y running peak. 0 = at peak. Macro = None.
     pub dd_pct: Option<f64>,
+    /// Persistent fetch-error message from `quote_cache.last_fetch_error`,
+    /// surfaced inline next to greyed (no_bars) rows so bad symbols
+    /// (e.g. HIVE.TO listed on TSXV not TSX) stay diagnosed across
+    /// sessions without re-PRIMEing. Macro rows always None (FRED has
+    /// its own fetch_error path on `fred_series` already). S22.
+    pub last_fetch_error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

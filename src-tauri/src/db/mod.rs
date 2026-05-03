@@ -71,6 +71,11 @@ impl Db {
                 "tile_visible",
                 "ALTER TABLE fred_series ADD COLUMN tile_visible INTEGER NOT NULL DEFAULT 1",
             ),
+            (
+                "quote_cache",
+                "last_fetch_error",
+                "ALTER TABLE quote_cache ADD COLUMN last_fetch_error TEXT",
+            ),
         ];
         for (table, col, sql) in migrations {
             match self.conn.execute(sql, []) {
@@ -242,6 +247,7 @@ pub struct QuoteCacheRow {
     pub market_cap: Option<f64>,
     pub volume_24h: Option<f64>,
     pub last_fetched: Option<String>,
+    pub last_fetch_error: Option<String>,
 }
 
 pub struct FredSeriesRow {
@@ -462,13 +468,14 @@ impl Db {
             .execute(
                 "INSERT INTO quote_cache \
                    (ticker, data_source, price, currency, change_pct_24h, change_abs_24h, \
-                    market_cap, volume_24h, last_fetched) \
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9) \
+                    market_cap, volume_24h, last_fetched, last_fetch_error) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL) \
                  ON CONFLICT(ticker, data_source) DO UPDATE SET \
                    price=excluded.price, currency=excluded.currency, \
                    change_pct_24h=excluded.change_pct_24h, change_abs_24h=excluded.change_abs_24h, \
                    market_cap=excluded.market_cap, volume_24h=excluded.volume_24h, \
-                   last_fetched=excluded.last_fetched",
+                   last_fetched=excluded.last_fetched, \
+                   last_fetch_error=NULL",
                 params![
                     ticker,
                     data_source,
@@ -485,6 +492,35 @@ impl Db {
         Ok(())
     }
 
+    /// Set or clear the persistent fetch-error message for a (ticker,
+    /// data_source) pair. Pass `Some(msg)` after a failed fetch (PRIME,
+    /// quote refresh, on-demand history); pass `None` to clear after a
+    /// success when the row may exist without going through `upsert_quote`
+    /// (e.g. PRIME succeeds via `upsert_price_bars` only).
+    ///
+    /// Upserts a row if none exists yet — first-ever fetch failure for a
+    /// new ticker still gets diagnosed without needing a prior quote row.
+    /// Does NOT touch `last_fetched` so the freshness check (used by
+    /// `list_ticker_tiles` to decide whether to retry) keeps treating
+    /// the row as stale and retries on next refresh.
+    pub fn set_quote_fetch_error(
+        &self,
+        ticker: &str,
+        data_source: &str,
+        error: Option<&str>,
+    ) -> Result<(), String> {
+        self.conn
+            .execute(
+                "INSERT INTO quote_cache (ticker, data_source, last_fetch_error) \
+                 VALUES (?1, ?2, ?3) \
+                 ON CONFLICT(ticker, data_source) DO UPDATE SET \
+                   last_fetch_error=excluded.last_fetch_error",
+                params![ticker, data_source, error],
+            )
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     pub fn get_quote(
         &self,
         ticker: &str,
@@ -493,7 +529,7 @@ impl Db {
         self.conn
             .query_row(
                 "SELECT ticker, data_source, price, currency, change_pct_24h, change_abs_24h, \
-                        market_cap, volume_24h, last_fetched \
+                        market_cap, volume_24h, last_fetched, last_fetch_error \
                  FROM quote_cache WHERE ticker=?1 AND data_source=?2",
                 params![ticker, data_source],
                 |row| {
@@ -511,6 +547,7 @@ impl Db {
                         market_cap: parse(6)?,
                         volume_24h: parse(7)?,
                         last_fetched: row.get(8)?,
+                        last_fetch_error: row.get(9)?,
                     })
                 },
             )

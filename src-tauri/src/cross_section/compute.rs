@@ -115,6 +115,14 @@ fn compute_ticker_row(
     let bars = db.all_price_bars_ohlcv(&t.ticker, &t.data_source)?;
 
     if bars.len() < NO_BARS_THRESHOLD {
+        // Greyed row — pull persistent fetch error so the user sees WHY
+        // the row is empty (e.g. "Yahoo: 404 — symbol not found"). For
+        // tickers that have never been fetched at all, no quote_cache
+        // row exists yet → last_fetch_error is None and the row stays
+        // generically greyed with no annotation. (S22)
+        let last_fetch_error = db
+            .get_quote(&t.ticker, &t.data_source)?
+            .and_then(|q| q.last_fetch_error);
         return Ok(CrossSectionRow {
             ticker: t.ticker.clone(),
             display_name: t.display_name.clone(),
@@ -123,6 +131,7 @@ fn compute_ticker_row(
             is_macro: false,
             no_bars: true,
             partial_history: false,
+            last_fetch_error,
             ..Default::default()
         });
     }
@@ -184,6 +193,8 @@ fn compute_ticker_row(
         atr,
         vol,
         dd_pct,
+        // Bars exist → fetch is healthy enough; no error annotation needed.
+        last_fetch_error: None,
     })
 }
 
@@ -232,6 +243,9 @@ fn compute_macro_row(
         atr: None,
         vol: None,
         dd_pct: None,
+        // FRED has its own fetch_error path on `fred_series` (surfaced
+        // by MacroTile already) — no need to plumb it through Pulse.
+        last_fetch_error: None,
     })
 }
 

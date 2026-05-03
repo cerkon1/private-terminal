@@ -2649,6 +2649,30 @@ html, body, #root {
   opacity: 0.5;
 }
 
+/* Errored no-bars row — persistent fetch error from quote_cache.last_fetch_error
+   surfaced inline (S22). Slightly higher opacity than plain no-bars so the
+   error is readable; amber border-left as a "look here, this row needs
+   attention" affordance. */
+.pulse__row--errored {
+  opacity: 0.8;
+  border-left: 2px solid var(--accent-amber);
+  margin-left: -2px;
+}
+
+.pulse__row-error {
+  grid-column: span 7;
+  display: flex;
+  align-items: center;
+  font-size: var(--fs-xs);
+  color: var(--accent-amber);
+  letter-spacing: 0.02em;
+  font-style: italic;
+  padding-left: var(--space-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .pulse__ticker {
   display: flex;
   align-items: center;

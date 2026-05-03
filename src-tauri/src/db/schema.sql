@@ -66,6 +66,11 @@ CREATE TABLE IF NOT EXISTS quote_cache (
   volume_24h        TEXT,
   sparkline_7d      TEXT,
   last_fetched      TEXT,
+  -- Last fetch error for this (ticker, data_source). Persisted across
+  -- sessions so bad symbols (HIVE.TO listed on TSXV not TSX, delisted
+  -- equities, etc.) stay self-diagnosing without re-PRIMEing. Cleared
+  -- on any successful fetch; written on corresponding failures (S22).
+  last_fetch_error  TEXT,
   PRIMARY KEY (ticker, data_source)
 );
 

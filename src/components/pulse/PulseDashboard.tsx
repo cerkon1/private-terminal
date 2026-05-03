@@ -459,17 +459,23 @@ export default function PulseDashboard({ onSelectSection }: Props) {
                 </div>
                 {section.rows.map(row => {
                   const clickable = !row.isMacro && !row.noBars;
+                  const errored = row.noBars && row.lastFetchError != null;
+                  // Tooltip prefers persistent fetch error when present;
+                  // otherwise falls back to the generic no-bars / partial /
+                  // displayName hint. Persistent errors survive sessions
+                  // without re-PRIME (S22).
+                  const titleHint = errored
+                    ? `${row.ticker} — last fetch failed: ${row.lastFetchError}`
+                    : row.noBars
+                      ? `${row.ticker} — bars not yet fetched (use Pulse → PRIME to populate)`
+                      : row.partialHistory
+                        ? `${row.ticker} — partial history; percentiles vs available range`
+                        : (row.displayName ?? row.ticker);
                   return (
                   <div
                     key={`${section.id}-${row.ticker}`}
-                    className={`pulse__row ${row.noBars ? 'pulse__row--no-bars' : ''} ${row.partialHistory ? 'pulse__row--partial' : ''}`}
-                    title={
-                      row.noBars
-                        ? `${row.ticker} — bars not yet fetched (refresh this section or use SCANNER → PRIME)`
-                        : row.partialHistory
-                          ? `${row.ticker} — partial history; percentiles vs available range`
-                          : (row.displayName ?? row.ticker)
-                    }
+                    className={`pulse__row ${row.noBars ? 'pulse__row--no-bars' : ''} ${row.partialHistory ? 'pulse__row--partial' : ''} ${errored ? 'pulse__row--errored' : ''}`}
+                    title={titleHint}
                   >
                     {clickable ? (
                       <button
@@ -483,17 +489,28 @@ export default function PulseDashboard({ onSelectSection }: Props) {
                     ) : (
                       <div className="pulse__ticker">{row.ticker}</div>
                     )}
-                    <div className="pulse__regime-cell">
-                      <PulseRegimeChip regime={row.regime} />
-                    </div>
-                    <div className="pulse__age-cell">
-                      {row.ageDays != null ? `${row.ageDays}d` : <span className="pulse__em">—</span>}
-                    </div>
-                    <PulseCell value={row.level} partial={row.partialHistory} />
-                    <PulseCell value={row.rsi} partial={row.partialHistory} />
-                    <PulseCell value={row.atr} partial={row.partialHistory} />
-                    <PulseCell value={row.vol} partial={row.partialHistory} />
-                    <PulseDDCell ddPct={row.ddPct} />
+                    {errored ? (
+                      <div
+                        className="pulse__row-error"
+                        title={row.lastFetchError ?? undefined}
+                      >
+                        ⚠ {row.lastFetchError}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="pulse__regime-cell">
+                          <PulseRegimeChip regime={row.regime} />
+                        </div>
+                        <div className="pulse__age-cell">
+                          {row.ageDays != null ? `${row.ageDays}d` : <span className="pulse__em">—</span>}
+                        </div>
+                        <PulseCell value={row.level} partial={row.partialHistory} />
+                        <PulseCell value={row.rsi} partial={row.partialHistory} />
+                        <PulseCell value={row.atr} partial={row.partialHistory} />
+                        <PulseCell value={row.vol} partial={row.partialHistory} />
+                        <PulseDDCell ddPct={row.ddPct} />
+                      </>
+                    )}
                   </div>
                   );
                 })}

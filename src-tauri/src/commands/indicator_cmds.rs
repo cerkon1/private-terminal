@@ -301,7 +301,10 @@ pub async fn prime_scanner_histories(
     });
     let results = join_all(fetches).await;
 
-    // Step 3: re-lock DB, upsert successes, collect failures.
+    // Step 3: re-lock DB, upsert successes, collect failures. Persistent
+    // fetch-error column is cleared on every success and written on every
+    // failure so bad symbols stay diagnosed across sessions without
+    // needing the user to re-PRIME (S22).
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let mut primed = 0;
     let mut failures = Vec::new();
@@ -309,19 +312,29 @@ pub async fn prime_scanner_histories(
         match result {
             Ok(bars) if !bars.is_empty() => {
                 if let Err(e) = db.upsert_price_bars(&ticker, &data_source, &bars) {
+                    let _ = db.set_quote_fetch_error(&ticker, &data_source, Some(&e));
                     failures.push(PrimeFailure { ticker, error: e });
                 } else {
+                    let _ = db.set_quote_fetch_error(&ticker, &data_source, None);
                     primed += 1;
                 }
             }
-            Ok(_) => failures.push(PrimeFailure {
-                ticker,
-                error: "Yahoo returned empty bar set".into(),
-            }),
-            Err(e) => failures.push(PrimeFailure {
-                ticker,
-                error: e.to_string(),
-            }),
+            Ok(_) => {
+                let msg = "Yahoo returned empty bar set";
+                let _ = db.set_quote_fetch_error(&ticker, &data_source, Some(msg));
+                failures.push(PrimeFailure {
+                    ticker,
+                    error: msg.into(),
+                });
+            }
+            Err(e) => {
+                let msg = e.to_string();
+                let _ = db.set_quote_fetch_error(&ticker, &data_source, Some(&msg));
+                failures.push(PrimeFailure {
+                    ticker,
+                    error: msg,
+                });
+            }
         }
     }
     Ok(PrimeResult { primed, failures })

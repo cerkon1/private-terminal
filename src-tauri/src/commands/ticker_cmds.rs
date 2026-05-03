@@ -144,7 +144,13 @@ pub async fn list_ticker_tiles(
     let mut tiles = Vec::with_capacity(tickers.len());
     for t in tickers {
         let quote = db.get_quote(&t.ticker, &t.data_source)?;
-        let fetch_error = errors.get(&t.ticker).cloned();
+        // In-memory errors from the current refresh win when present (most
+        // recent state); fall back to the persistent column so a previous
+        // failure not retried this run still surfaces (S22).
+        let fetch_error = errors
+            .get(&t.ticker)
+            .cloned()
+            .or_else(|| quote.as_ref().and_then(|q| q.last_fetch_error.clone()));
         let current_price = quote.as_ref().and_then(|q| q.price);
 
         // Compute a pct change from a past close to the current live price.
@@ -186,7 +192,19 @@ pub async fn list_ticker_tiles(
 }
 
 async fn fetch_and_upsert_quote(state: &AppState, symbol: &str) -> Result<(), String> {
-    let q = yahoo::fetch_quote(symbol).await.map_err(|e| e.to_string())?;
+    // Yahoo fetch outside the lock; on failure persist the error so bad
+    // symbols stay self-diagnosing across sessions (S22). Success path's
+    // upsert_quote clears the error column unconditionally.
+    let q = match yahoo::fetch_quote(symbol).await {
+        Ok(q) => q,
+        Err(e) => {
+            let msg = e.to_string();
+            if let Ok(db) = state.db.lock() {
+                let _ = db.set_quote_fetch_error(symbol, "yahoo", Some(&msg));
+            }
+            return Err(msg);
+        }
+    };
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db.upsert_quote(
         &q.symbol,
