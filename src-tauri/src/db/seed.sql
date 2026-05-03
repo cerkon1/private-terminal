@@ -457,6 +457,14 @@ INSERT OR IGNORE INTO analysis_tools (id, display_name, scope, display_order, en
   ('yield_curve',           'Yield Curve',          'macro',       2, 1, NULL),
   ('pairs_ratio',           'Pairs',                'cross_asset', 3, 1, '{"quickPicks":[["BTC-USD","ETH-USD"],["GC=F","SI=F"],["HG=F","GC=F"],["^IXIC","^GSPC"]]}'),
   ('rrg',                   'RRG',                  'cross_asset', 4, 1, '{"benchmark":"^GSPC","rsPeriod":14,"momentumPeriod":5,"tailLength":8}'),
-  ('recession_prob',        'Recession Prob',       'macro',       5, 1, NULL),
-  ('financial_conditions',  'Financial Conditions', 'macro',       6, 1, NULL),
-  ('regime_quadrant',       'Regime Quadrant',      'macro',       7, 1, '{"inflationProxy":"cpi","trailMonths":24}');
+  ('recession_prob',        'Recession',            'macro',       5, 1, NULL),
+  ('financial_conditions',  'FCI',                  'macro',       6, 1, NULL),
+  ('regime_quadrant',       'Regime',               'macro',       7, 1, '{"inflationProxy":"cpi","trailMonths":24}');
+
+-- S+1: shorter labels so the 7-tab strip fits on one row at common
+-- effective widths (1128px CSS px / Win 200% scale on hi-DPI laptops).
+-- INSERT OR IGNORE above only seeds fresh DBs; UPDATE rewrites the
+-- display_name on existing DBs at every boot. Idempotent.
+UPDATE analysis_tools SET display_name = 'Recession' WHERE id = 'recession_prob';
+UPDATE analysis_tools SET display_name = 'FCI'       WHERE id = 'financial_conditions';
+UPDATE analysis_tools SET display_name = 'Regime'    WHERE id = 'regime_quadrant';
