@@ -32,10 +32,16 @@
 
   --text-primary: #e5e7eb;            /* [L] */
   --text-primary-rgb: 229, 231, 235;  /* [L] */
-  --text-secondary: #9ca3af;          /* [L] */
-  --text-secondary-rgb: 156, 163, 175;/* [L] */
-  --text-tertiary: #6b7280;           /* [L] */
-  --text-tertiary-rgb: 107, 114, 128; /* [L] */
+  /* Text-secondary + tertiary brightened in S22 readability pass.
+     Old: #9ca3af / #6b7280 (Tailwind gray-400 / gray-500) — secondary
+     was barely-comfortable AA (~6.7:1 vs --bg-base) and tertiary was
+     barely-AA (~4.4:1) which is hostile to mild visual impairment.
+     New: ~AAA on bg-base for both. status-neutral kept at #6b7280 —
+     used only for the market-hours dot where muted is intentional. */
+  --text-secondary: #b8bdc7;          /* [L] — was #9ca3af */
+  --text-secondary-rgb: 184, 189, 199;/* [L] */
+  --text-tertiary: #8a91a0;           /* [L] — was #6b7280 */
+  --text-tertiary-rgb: 138, 145, 160; /* [L] */
 
   --accent-cyan: #00f7ff;             /* [L] — needs deeper variant on white */
   --accent-cyan-rgb: 0, 247, 255;     /* [L] */
