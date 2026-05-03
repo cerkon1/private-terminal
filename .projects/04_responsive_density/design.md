@@ -1,6 +1,6 @@
 # Screen-density adaptation — v1.2 follow-up
 
-Status: **scoped, awaiting tester diagnostics + screenshots before coding.**
+Status: **CLOSED.** Phase 1 shipped S23 (12 edits across 8 files, ~100–130px reclaimed app-wide). Tester re-tested rc.2 build and confirmed satisfaction with the viewing-element changes. Phase 2 (`@media (max-height)` density rules) and Phase 3 (Settings → Density toggle) deferred indefinitely — no remaining user signal. Re-open the project only if a future tester surfaces concrete cramping that Phase 1 didn't already address.
 
 ## Origin
 
