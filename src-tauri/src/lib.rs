@@ -50,7 +50,6 @@ pub fn run() {
             commands::sector_cmds::list_palette_tickers,
             commands::ticker_cmds::list_ticker_tiles,
             commands::ticker_cmds::get_ticker_history,
-            commands::ticker_cmds::list_market_index_quotes,
             commands::system_cmds::get_db_info,
             commands::system_cmds::get_storage_stats,
             commands::system_cmds::db_maintenance,

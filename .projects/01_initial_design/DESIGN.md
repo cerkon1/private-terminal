@@ -189,7 +189,7 @@ Compute on-demand when feature chart opens (not persisted). `f64` precision (dis
 | # | Feature | Description | Milestone |
 |---|---------|-------------|-----------|
 | **1** | **Multi-ticker overlay** | Compare N tickers as % change from baseline on one chart (BTC/ETH/SPY YTD) | M9 |
-| **2** | **Market-hours indicator** | App-shell strip showing which exchanges are open (NYSE/TSX/LSE/TYO/HKG/SSE/ASX/KRX). Pure timezone math | M3 |
+| **2** | ~~Market-hours indicator~~ | ~~App-shell strip showing which exchanges are open (NYSE/TSX/LSE/TYO/HKG/SSE/ASX/KRX). Pure timezone math~~ | **DROPPED post-S23** — eight-exchange row was decorative globalism. User trades NYSE/Nasdaq/TSX; the other five exchanges added zero value. INDICES tiles already carry direction-since-close with full numbers. Reclaimed ~34-40px of vertical chrome app-wide. |
 | **3** | **Command palette (Ctrl+K)** | Fuzzy search across tickers, sectors, FRED series, Analysis tabs — jump anywhere. **Shipped S22** (ahead of M9; Fuse.js, four-surface aggregator, S21/S22 handoff reuse, visible `⌘K` button in AppHeader). | M9 / **S22** |
 | **4** | **Regime shading** | State-coloured envelope between SMMA Ribbon's v1 and v2 lines (gold/navy/gray). Envelope width = signal strength. Delivered in M6. | M6 |
 | **5** | **Watchlist performance summary** | Sortable table: ticker × 1D/1W/1M/YTD/1Y % change. SQL aggregate on `price_history` | M9 |

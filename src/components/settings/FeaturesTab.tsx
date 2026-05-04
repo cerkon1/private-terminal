@@ -283,16 +283,6 @@ export default function FeaturesTab() {
       </div>
 
       <div className="about-card">
-        <div className="about-card__title">Market-hours strip</div>
-        <p className="about-card__body">
-          Top-of-window strip showing eight major exchanges (NYSE / TSX / LSE
-          / TYO / HKG / SSE / ASX / KRX). Each chip is tied to its main index
-          — outline color (green / red) reflects direction since last close,
-          and a cyan dot indicates the exchange is currently open.
-        </p>
-      </div>
-
-      <div className="about-card">
         <div className="about-card__title">
           Tile range switch (1D / 1W / 1M / YTD / 1Y)
         </div>

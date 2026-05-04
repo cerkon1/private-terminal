@@ -5,7 +5,6 @@ import { AnalysisLayout } from './components/analysis/AnalysisLayout';
 import AppHeader from './components/AppHeader';
 import MacroDashboard from './components/MacroDashboard';
 import ManageWatchlistModal from './components/ManageWatchlistModal';
-import MarketHoursStrip from './components/MarketHoursStrip';
 import NewsDashboard from './components/NewsDashboard';
 import PulseDashboard from './components/pulse/PulseDashboard';
 import SettingsModal from './components/SettingsModal';
@@ -80,7 +79,6 @@ export default function App() {
         onSettingsOpen={() => setSettingsOpen(true)}
         onPaletteOpen={() => setPaletteOpen(true)}
       />
-      <MarketHoursStrip />
       <div className="app-body">
         <Sidebar
           activeId={activeSection}
