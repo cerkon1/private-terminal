@@ -16,8 +16,8 @@ Blueprint reference images live in `.projects/01_initial_design/images/`:
 - `urbankaoberg_reference_layout.png` — IA, tile density, aesthetic reference
 
 Reference repos:
-- **PrivateACB** `E:\Users\PBL\Documents\Dev\PrivateACB_Tauri` — infrastructure reuse source
-- **trendscope** `E:\Users\PBL\Documents\Dev\trendscope` — SMMA Ribbon / RSI / ATR indicator math (`src/trendscope/indicators.py` is the Rust port target; trendscope's code still uses the older "Larsson Line" label — we renamed to SMMA Ribbon in S7 after learning the math is derivative of public community work)
+- **PrivateACB** (sibling Tauri repo on the dev machine) — infrastructure reuse source
+- **trendscope** (sibling Python repo on the dev machine) — SMMA Ribbon / RSI / ATR indicator math (`src/trendscope/indicators.py` is the Rust port target; trendscope's code still uses the older "Larsson Line" label — we renamed to SMMA Ribbon in S7 after learning the math is derivative of public community work)
 
 ---
 
@@ -167,5 +167,5 @@ Conventional commits: `feat:`, `fix:`, `docs:`, `chore:`.
 | Lessons (gotchas) | `.projects/00_tracking/LESSONS.md` |
 | Blueprint images | `.projects/01_initial_design/images/` |
 | v1.1 Analysis design | `.projects/02_v1_1_analysis/v11_analysis_design.md` |
-| PrivateACB (infra reuse) | `E:\Users\PBL\Documents\Dev\PrivateACB_Tauri` |
-| trendscope (indicator math) | `E:\Users\PBL\Documents\Dev\trendscope` |
+| PrivateACB (infra reuse) | sibling Tauri repo on the dev machine |
+| trendscope (indicator math) | sibling Python repo on the dev machine |

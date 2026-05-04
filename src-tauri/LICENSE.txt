@@ -1,87 +1,54 @@
-PRIVATE TERMINAL END USER LICENSE AGREEMENT
+MIT License
 
-Last Updated: May 3, 2026
+Copyright (c) 2026 PrivateACB
 
-IMPORTANT: PLEASE READ THIS LICENSE AGREEMENT CAREFULLY BEFORE USING THIS SOFTWARE.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-By installing, copying, or otherwise using Private Terminal ("Software"), you agree to be bound by the terms of this End User License Agreement ("Agreement"). If you do not agree to these terms, do not install or use the Software.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-1. LICENSE GRANT
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
-Private Terminal is provided free of charge for personal use. Subject to the terms of this Agreement, PrivateACB grants you a non-exclusive, non-transferable license to:
-- Install and use the Software on any number of devices owned or controlled by you
-- Use the Software for personal financial research and market monitoring
+────────────────────────────────────────────────────────────────────────────
 
-No payment, registration, or license key is required.
+DECISION SUPPORT, NOT INVESTMENT ADVICE.
 
-2. RESTRICTIONS
+Private Terminal is a personal research and visualization tool. The
+indicators, charts, and analytics shown are descriptive — they describe
+historical data and current market state. They are not predictions, signals,
+or recommendations. Decisions about your money are yours alone, made under
+your own judgment and at your own risk.
 
-You may NOT:
-- Redistribute, sell, lease, sublicense, or otherwise commercially exploit the Software
-- Repackage or rebrand the Software for distribution
-- Reverse engineer, decompile, or disassemble the Software
-- Remove or alter any proprietary notices or labels
-- Use the Software or its output to provide commercial financial research, advisory, or analytical services to third parties
-- Use the Software or any information derived from it to develop, improve, or inform a competing product or service
+This applies to all charts, indicators, percentile rankings, regime
+classifications, and any other output of the Software, including but not
+limited to: SMMA Ribbon state, RSI, ATR, Drawdown, Volume Profile, Anchored
+VWAP, Pulse cross-section heatmap, and all Analysis-section tools.
 
-3. DATA AND PRIVACY
+────────────────────────────────────────────────────────────────────────────
 
-- All your watchlists, settings, and cached market data are stored locally on your device
-- The Software does not transmit personal data to PrivateACB
-- The Software fetches public market data directly from third-party providers as listed below; those connections are made from your device, not via PrivateACB
-- API keys you supply (e.g. FRED, Finnhub) are stored locally in the Software's database and are never transmitted to PrivateACB
+DATA SOURCES.
 
-4. THIRD-PARTY DATA SOURCES
+Private Terminal queries the following public data sources to populate its
+displays. Each is operated by a third party under their own terms; the
+Software is not affiliated with any of them.
 
-The Software fetches public market data from third-party providers including:
-- Federal Reserve Economic Data (FRED) for macroeconomic series
-- CoinGecko for cryptocurrency data
-- Yahoo Finance for equities, indices, futures, and FX
-- Finnhub for news headlines
-- Various RSS feeds for general financial news
+  - FRED (Federal Reserve Bank of St. Louis) — macroeconomic series
+  - Yahoo Finance (unofficial endpoint) — quotes and historical bars
+  - Finnhub — US-equity news (only when an API key is supplied)
+  - News RSS feeds — public broadcast feeds you choose to enable
 
-PRIVATE TERMINAL DOES NOT GUARANTEE THE ACCURACY, COMPLETENESS, OR TIMELINESS OF DATA PROVIDED BY THIRD-PARTY SOURCES. All market data, prices, indicator values, and news content are provided "as is" without warranty. You are responsible for verifying the accuracy of any data shown in the Software before acting on it.
-
-PrivateACB is not affiliated with, endorsed by, or responsible for any third-party data provider. Third-party services may be subject to their own terms of use and may change, throttle, or become unavailable without notice. Continued availability of any third-party data source is not guaranteed.
-
-5. NOT FINANCIAL ADVICE
-
-The Software is a personal research tool that displays market data and computes technical indicators. It is provided as DECISION SUPPORT, NOT INVESTMENT ADVICE.
-
-THE SOFTWARE DOES NOT PROVIDE INVESTMENT, FINANCIAL, TAX, LEGAL, OR ACCOUNTING ADVICE. Indicator outputs, regime classifications, percentile rankings, drawdown calculations, and any other computed values are illustrative analytical lenses on historical data, not predictions of future market behavior. Past performance and historical patterns do not guarantee future results.
-
-YOU ARE SOLELY RESPONSIBLE FOR ANY INVESTMENT DECISIONS YOU MAKE. You should consult with qualified financial, tax, and legal professionals before making investment decisions. Private Terminal is not a registered investment advisor and is not a substitute for one.
-
-6. DISCLAIMER OF WARRANTIES
-
-THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT. PRIVATEACB DOES NOT WARRANT THAT THE SOFTWARE WILL MEET YOUR REQUIREMENTS, OPERATE UNINTERRUPTED, BE FREE OF DEFECTS OR ERRORS, OR PRODUCE ACCURATE OR RELIABLE RESULTS.
-
-7. LIMITATION OF LIABILITY
-
-IN NO EVENT SHALL PRIVATEACB BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, DATA, USE, OR INVESTMENT LOSSES, ARISING OUT OF OR RELATED TO THIS AGREEMENT, THE SOFTWARE, OR ANY DATA OR ANALYSIS DISPLAYED BY THE SOFTWARE — EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
-
-This limitation applies whether the alleged liability is based on contract, tort, negligence, strict liability, or any other basis.
-
-8. INTELLECTUAL PROPERTY
-
-The Software and all copies thereof are proprietary to PrivateACB and title remains exclusively with PrivateACB. All rights in the Software not specifically granted in this Agreement are reserved. Open-source dependencies bundled with the Software remain subject to their respective licenses.
-
-9. TERMINATION
-
-This license is effective until terminated. It will terminate automatically if you fail to comply with any term of this Agreement. Upon termination, you must uninstall the Software and destroy all copies in your possession.
-
-10. GOVERNING LAW
-
-This Agreement shall be governed by and construed in accordance with the laws of Canada, without regard to its conflict of law provisions.
-
-11. ENTIRE AGREEMENT
-
-This Agreement constitutes the entire agreement between you and PrivateACB concerning the Software and supersedes all prior agreements and understandings.
-
-12. CONTACT
-
-Private Terminal is provided for free by the folks at PrivateACB. For questions about this license or the Software, contact: support@privateacb.com
-
-By clicking "I Accept" or by installing the Software, you acknowledge that you have read this Agreement, understand it, and agree to be bound by its terms.
-
-Copyright (c) 2026 PrivateACB. All rights reserved.
+No outbound calls leave the machine other than these legitimate requests
+to the public data sources, and external links you click that open in your
+default browser. The full list is documented inside the application at
+Settings → Privacy.

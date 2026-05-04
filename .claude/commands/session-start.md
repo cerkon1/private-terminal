@@ -26,8 +26,8 @@ After reading, provide a summary:
 
 **Key rules to remember on every session:**
 - Extensibility-first is a HARD CONSTRAINT — sectors, tickers, news feeds, indicators are data / registry entries, never hardcoded.
-- Reuse PrivateACB infrastructure patterns (`E:\Users\PBL\Documents\Dev\PrivateACB_Tauri`) — SQLite+WAL, CoinGecko client, design tokens, serde/IPC rules.
-- Port trendscope's indicator math verbatim (`E:\Users\PBL\Documents\Dev\trendscope\src\trendscope\indicators.py`). Don't re-tune without calibration data — read trendscope's "Tuning journey" section first.
+- Reuse PrivateACB infrastructure patterns (sibling Tauri repo on the dev machine) — SQLite+WAL, CoinGecko client, design tokens, serde/IPC rules.
+- Port trendscope's indicator math verbatim (sibling Python repo, `src/trendscope/indicators.py`). Don't re-tune without calibration data — read trendscope's "Tuning journey" section first.
 - Apache ECharts for all charting. Don't swap without real evidence it's insufficient.
 - Indicators use `f64` (display-only). Only quotes/FX use `rust_decimal`.
 - Free-tier data sources only. No paid APIs until a real use case hits a wall.

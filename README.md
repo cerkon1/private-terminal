@@ -1,159 +1,172 @@
-# Private Terminal — v1.0.0-rc.1
+# Private Terminal
 
-A personal Bloomberg-style desktop research dashboard. Free, local, no
-account, no cloud, no telemetry.
+A free, local-first desktop research dashboard. Macroeconomics, your
+watchlist, and one screen that shows where everything stands today versus
+the last five years.
 
-This is a **release candidate** — the feature set is complete and the
-intent is to ship `1.0.0` once cold-eye testers (you) confirm nothing
-is obviously broken.
+No accounts. No telemetry. No cloud sync. Your data stays on your machine.
 
----
-
-## 1. Get it running (3 steps)
-
-### Step 1 — Launch the exe
-
-Double-click `personal-terminal.exe`.
-
-**Expect a SmartScreen warning the first time.** The app isn't
-code-signed yet (signing certs are a planned cost, not a v1.0 blocker),
-so Windows shows a blue dialog:
-
-> *Microsoft Defender SmartScreen prevented an unrecognized app from
-> starting. Running this app might put your PC at risk.*
-
-To run it:
-
-1. Click **More info**
-2. Click **Run anyway**
-
-Windows remembers this choice — you'll only see the dialog on the first
-launch (or after a re-download).
-
-If your antivirus quarantines the exe, that's a false positive — same
-Tauri build stack as the maker's other product (PrivateACB) and the
-same flag categories occasionally hit it. Whitelist or restore from
-quarantine; let me know if it happens so I can track which AVs are
-flagging.
-
-### Step 2 — Add a FRED API key (90 seconds, free)
-
-Without this, the **MACRO** section's 18 economic-indicator tiles will
-sit empty. Every other section works without any key.
-
-1. Go to <https://fred.stlouisfed.org/docs/api/api_key.html>
-2. Click **Request or view your API key**, sign up (email + password),
-   verify email, copy the key.
-3. In Private Terminal: click the ⚙ icon (top-right) → **API Keys**
-   tab → paste into the FRED row → **SAVE**.
-4. Switch to the MACRO section in the sidebar. Tiles populate within a
-   few seconds.
-
-### Step 3 — (optional) Add a Finnhub API key
-
-Only needed if you want US ticker news. Same drill: free signup at
-<https://finnhub.io/>, paste the key in Settings → API Keys.
-
-Without it, the **NEWS** section still works — 8 RSS feeds (BBC,
-CNBC, Financial Post, Fed press, etc.) populate on a 30-min cadence.
+Built by the team behind [PrivateACB](https://privateacb.com).
 
 ---
 
-## 2. First-run expectations
+## Why this exists
 
-| What | When you'll see it |
+Most retail charting tools — TradingView, KOYFIN, the brokerage screens —
+gate features behind accounts, sell behavioral data, or push toward an
+upgrade tier. We build privacy-first software (PrivateACB is a desktop
+crypto-tax calculator) and we wanted a research dashboard that followed the
+same principles. So we built one and gave it away.
+
+Private Terminal is what we'd want to use ourselves.
+
+---
+
+## What's inside
+
+**Pulse — cross-section heatmap.** Every ticker in your watchlist plus 29
+FRED macro series, expressed as percentile-rank versus that series' own
+trailing 5-year window. One sortable, filterable screen with REGIME / AGE /
+LEVEL / RSI / ATR / VOL / DD columns. Click any ticker to drop into a
+chart.
+
+**Macro dashboard.** 29 economic indicators from FRED with category tabs
+(Rates · Inflation · Labor · Growth · Housing · Liquidity · Risk · Energy)
+and a heatmap view by year-over-year delta.
+
+**Multi-indicator charts.** Candlestick view with SMMA Ribbon (quad-MA
+state), RSI(14), ATR(14), Volume Profile (VRVP), Drawdown subpane, and
+multi-anchor Anchored VWAP. Click anywhere on the price pane to drop an
+AVWAP anchor; up to five per ticker, persisted per-ticker.
+
+**Analysis section — seven cross-asset tools.** Correlations, Pairs ratios,
+Relative Rotation Graph (RRG), Yield Curve, Recession Probability,
+Financial Conditions, Macro Regime Quadrant. Each tab includes
+plain-language interpretation guidance and the underlying math.
+
+**Watchlist + sectors.** 176 seed tickers across US/CA equities (ten
+sub-sectors each), indices (Americas / Europe / Asia-Pacific), commodities,
+FX, bonds, VIX. Add your own; restructure freely.
+
+**Command palette (Ctrl+K).** Fuzzy-search across tickers, sectors, FRED
+series, and Analysis tabs. Jump anywhere with two keystrokes.
+
+---
+
+## Privacy stance
+
+The reason this app exists is to demonstrate that private free software is
+real. Detailed list lives in the app at Settings → Privacy. Summary:
+
+- **No accounts.** No login, no signup, no email collection.
+- **No telemetry.** The app reports nothing back. Not usage, not errors,
+  not performance.
+- **No analytics.** No Google Analytics, no Mixpanel, no PostHog, no
+  Segment, no Sentry.
+- **No auto-update phone-home.** New versions are GitHub Releases you
+  download by choice.
+- **No cloud sync.** Your watchlist, indicator settings, AVWAP anchors,
+  view preferences — all live in a single SQLite file on this machine.
+- **No data selling.** We don't have any data to sell.
+
+**Outbound network calls.** The only HTTP requests Private Terminal makes
+are to the public data sources you choose to enable:
+
+| Destination | Purpose |
 |---|---|
-| **Sidebar with all sections** | Immediately. SCANNER / MACRO / NEWS pinned at top; INDICES, CRYPTO, US/CA EQUITIES, FUTURES & FX below the divider. |
-| **Yahoo-source tiles** (INDICES, CRYPTO, EQUITIES, FUTURES) | Populate within 1–3 seconds of clicking the section. No key required. |
-| **MACRO tiles** | **Empty until FRED key added.** Add the key → tiles populate within seconds. |
-| **News articles** | RSS feeds fetch on a 30-min schedule. First session may have no items in NEWS for up to half an hour. |
-| **Charts on tile click** | Click any ticker tile → feature chart with candlesticks, volume, optional indicators (SMMA Ribbon, RSI, ATR), volume profile (VRVP). History fetches on demand the first time. |
+| `api.stlouisfed.org` | FRED macroeconomic series |
+| `query2.finance.yahoo.com` | Quotes and historical bars |
+| `finnhub.io` | US-equity news (only if you supply a Finnhub API key) |
+| News RSS feed publishers | Headlines from feeds you enable (BBC, CNBC, Fed, BoC, Financial Post, CBC, Al Jazeera) |
+
+Plus `tauri-plugin-opener`, which launches URLs in your default browser
+when you click a news headline or the PrivateACB cross-link. User-initiated
+only — not background.
 
 ---
 
-## 3. Quick orientation
+## Install
 
-Things worth knowing without a manual:
+Download the latest installer or portable EXE from
+[GitHub Releases](https://github.com/cerkon1/private-terminal/releases).
 
-- **Sidebar bottom — "Manage Watchlist"**: add/rename/move/delete tickers, groups, news feeds. Three tabs, one button.
-- **Tile click → feature chart**: candlesticks + indicator panel. Scroll/drag the bottom slider to zoom history.
-- **Indicator chips**: each chart has SMMA RIBBON / RSI / ATR toggles. OFF by default per ticker; click to enable.
-- **AUTO Y / VOL / VRVP toggles** in the chart toolbar: y-axis auto-fit, volume pane, volume profile overlay.
-- **Range switch** (1D/1W/1M/YTD/1Y) on dashboards: changes the % delta the tile heatmap is computed against.
-- **HEATMAP toggle**: replace numeric values with green/red colour-coding per tile.
-- **REFRESH**: forces a re-fetch for the current section. Otherwise data updates on a per-source cadence (5 min / 15 min / etc.).
+**Windows 10/11.** No code-signing certificate yet, so SmartScreen will
+warn on first launch — click *More info* → *Run anyway*. The signing cost
+is on the v1.x roadmap.
 
----
-
-## 4. Known limitations / things that aren't in this build
-
-- **No installer** — portable exe only. No Start Menu entry, no
-  Add/Remove Programs row. To "uninstall," delete the exe + the
-  `%APPDATA%\Roaming\personal-terminal\` folder (see §6 below).
-- **No code signing** — hence the SmartScreen warning. On the v1.x
-  roadmap.
-- **No auto-update** — when v1.0.x or v1.1.0 ships, you re-download the
-  exe and replace the old one. Your database persists.
-- **Crypto data via Yahoo, not CoinGecko** — the CRYPTO tickers
-  (BTC-USD, ETH-USD, etc.) route through Yahoo Finance. CoinGecko
-  integration is on the v1.1 roadmap.
-- **Log-scale Y axis** on price charts — attempted in v0.10, dropped
-  for v1.0 due to ECharts' base-10-tick limitation. Linear only for
-  now.
-- **Single-machine, single-user** — no accounts, no cloud, no shared
-  watchlists. By design.
+Mac and Linux builds are not currently provided. Tauri supports them; the
+codebase is portable; we just haven't packaged for them. PRs welcome.
 
 ---
 
-## 5. What feedback would be most useful
+## Build from source
 
-Cold-eye reviews are most useful for **discoverability and expectation
-mismatch** — bugs are useful too, but secondary.
+```sh
+# Prerequisites: Node 20+, Rust stable, Tauri v2 system deps
+# https://v2.tauri.app/start/prerequisites/
 
-Ideal feedback bullets, in priority order:
+git clone https://github.com/cerkon1/private-terminal
+cd private-terminal
+npm install
+npm run tauri:dev   # development with hot reload
+npm run tauri:build # production build (NSIS installer + portable exe on Windows)
+```
 
-1. **What's confusing?** Labels you don't understand, controls you
-   can't find, sections that look broken when they're actually empty
-   on purpose (FRED-without-key, NEWS pre-fetch).
-2. **What surprised you?** Both negatively ("I clicked X expecting Y
-   and got Z") and positively ("oh, that's neat").
-3. **What did you try to do that you couldn't?** Missing affordances —
-   things that *should* be possible but aren't obvious.
-4. **What broke?** Visual glitches, console errors (Ctrl+Shift+I →
-   Console tab), data that's wrong vs. another source.
-5. **Performance.** Anything feel laggy or unresponsive on your machine?
-
-A short note like *"I clicked Manage Watchlist and didn't realize the
-tabs at the top were clickable for 30 seconds"* is more useful than a
-long bug list.
+A FRED API key is required to populate the MACRO section (free signup at
+<https://fred.stlouisfed.org/docs/api/api_key.html>). A Finnhub API key is
+optional, used only for US ticker news (free signup at
+<https://finnhub.io/>). Both are stored locally in your SQLite DB; neither
+is required for the app to launch or for the rest of the sections to work.
 
 ---
 
-## 6. Where data lives, and how to clean up
+## Project structure
 
-**Database file:**
-`%APPDATA%\Roaming\personal-terminal\personal-terminal.db`
+```
+src-tauri/        Rust backend — data fetchers, SQLite, indicator math, IPC
+  src/sources/    Per-source HTTP clients (FRED / Yahoo / Finnhub / RSS)
+  src/indicators/ Trait-based registry — SMMA Ribbon / RSI / ATR
+  src/analysis/   Cross-asset analysis tools (Correlations / RRG / etc.)
+  src/cross_section/ Pulse percentile-rank compute
+  src/db/         SQLite schema + seed
+src/              React + TypeScript frontend
+  components/     Tickers / Pulse / Macro / News / Analysis / Settings / Charts
+  styles/         Design tokens + theming
+.projects/        Development log — design notes, session-by-session decisions, lessons
+CLAUDE.md         Project rules (architecture constraints + reuse checklists)
+```
 
-The header in the app shows the exact path; click it to copy.
-
-The folder also contains:
-- `personal-terminal.db-wal` and `-shm` — SQLite WAL files (transient,
-  recreated on launch)
-- `db_location.txt` — only present if you've used Settings → Storage →
-  Change Location to move the DB elsewhere
-
-**To uninstall cleanly:**
-1. Close the app.
-2. Delete `personal-terminal.exe` (wherever you saved it).
-3. Delete the `%APPDATA%\Roaming\personal-terminal\` folder.
-
-Done. No registry keys, no scheduled tasks, no leftover services.
+The `.projects/` folder contains the full development log if you're
+curious about how the app was built — design decisions, milestone notes,
+and lessons learned across each session.
 
 ---
 
-## 7. Sending feedback
+## Stack
 
-DM, email, screenshot, voice memo — whatever's easiest for you. No
-formal bug-tracker setup yet; this is a friends-and-family RC.
+- **Tauri v2** — desktop shell (Rust + WebView2)
+- **Rust** — backend, data fetchers, SQLite, indicator computation
+- **React + TypeScript + Vite** — frontend
+- **Apache ECharts** — charting (MIT, ~1 MB gzipped)
+- **SQLite** — local storage (WAL mode)
 
-Thanks for testing.
+No SaaS dependencies. No cloud services. No external state.
+
+---
+
+## Status
+
+Version 1.0.0 ships from this repo. Active development continues — see
+the [GitHub Issues](https://github.com/cerkon1/private-terminal/issues) for
+roadmap items and bug reports.
+
+This is a personal-scale project, not a startup. Issue responses are
+casual; PRs are welcome but not promised same-day merges.
+
+---
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+Copyright © 2026 PrivateACB.

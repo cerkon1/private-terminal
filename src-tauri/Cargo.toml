@@ -1,8 +1,13 @@
 [package]
 name = "personal-terminal"
 version = "1.0.0-rc.2"
-description = "Private Terminal — personal Bloomberg-style desktop research dashboard"
+description = "Private Terminal — local-first desktop research dashboard for personal market study"
 edition = "2021"
+license = "MIT"
+authors = ["PrivateACB <support@privateacb.com>"]
+repository = "https://github.com/cerkon1/private-terminal"
+homepage = "https://privateacb.com/terminal"
+readme = "../README.md"
 
 [lib]
 name = "personal_terminal_lib"

@@ -1,8 +1,15 @@
 {
   "name": "personal-terminal",
   "version": "1.0.0-rc.2",
-  "description": "Private Terminal — personal Bloomberg-style desktop research dashboard",
+  "description": "Private Terminal — local-first desktop research dashboard for personal market study",
   "private": true,
+  "license": "MIT",
+  "author": "PrivateACB <support@privateacb.com>",
+  "homepage": "https://privateacb.com/terminal",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cerkon1/private-terminal.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
