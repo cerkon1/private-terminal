@@ -913,14 +913,23 @@ html, body, #root {
 
 .feature-chart-pane__title-block {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--space-sm);
+  /* Min-width: 0 lets the title-block flex-shrink past its intrinsic content
+     width when other header items (chip strip) need room — long ticker
+     names ellipsize rather than push the chip strip off-row. */
+  min-width: 0;
 }
 
 .feature-chart-pane__title {
   margin: 0;
   font-size: var(--fs-lg);
   color: var(--text-primary);
+  /* Truncate over-long names so the row stays one line at smaller widths. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .feature-chart-pane__chart {
