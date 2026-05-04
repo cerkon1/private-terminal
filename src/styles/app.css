@@ -1004,6 +1004,160 @@ html, body, #root {
   height: 12px;
 }
 
+/* Wrap that pairs a chip with optional gear button + popover. The wrap is
+   position:relative so the popover (position:absolute) anchors beneath the
+   chip. Used by AVWAP today; precedent for other indicators that gain
+   sub-state in future (M10 per-indicator parameter popover). */
+.indicator-chip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+/* Small gear button rendered next to a chip. Borrows the chip's border
+   styling for visual coherence; clicking it doesn't toggle the chip
+   because it lives outside the <label> element. */
+.indicator-chip__gear {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-left: none;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1;
+  padding: var(--space-xxs, 3px) var(--space-xs);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.indicator-chip__gear:hover {
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+}
+
+/* AVWAP anchors popover. Anchored to the AVWAP chip via the parent
+   .indicator-chip-wrap (position:relative). Same elevated-surface look as
+   the right-click TileContextMenu — cyan ring on outer shadow + dark
+   elevated background for legibility above the chart. */
+.avwap-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  min-width: 280px;
+  z-index: 60;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-emphasis);
+  border-radius: var(--radius-md);
+  box-shadow:
+    0 16px 50px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(var(--accent-cyan-rgb), 0.12);
+  padding: var(--space-sm) 0;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.avwap-popover__header {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 var(--space-md) var(--space-xs);
+}
+
+.avwap-popover__empty {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  padding: var(--space-xs) var(--space-md) var(--space-sm);
+}
+
+.avwap-popover__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.avwap-popover__row,
+.avwap-popover__hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--fs-sm);
+}
+
+.avwap-popover__hint {
+  color: var(--text-tertiary);
+  font-size: var(--fs-xs);
+}
+
+.avwap-popover__bullet {
+  color: var(--accent-amber);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.avwap-popover__bullet--dim {
+  color: var(--text-tertiary);
+}
+
+.avwap-popover__date {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.avwap-popover__price {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.avwap-popover__remove {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 var(--space-xs);
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.avwap-popover__remove:hover {
+  color: var(--status-down);
+}
+
+.avwap-popover__footer {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-xs);
+  padding: var(--space-xs) var(--space-md) 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.avwap-popover__clear {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: var(--space-xxs, 3px) var(--space-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.avwap-popover__clear:hover {
+  color: var(--status-down);
+  border-color: var(--status-down);
+}
+
 /* SMMA Ribbon state badge — used by Settings → Appearance palette preview.
    Variants live inline (preview pulls colors from current palette state). */
 .state-badge {

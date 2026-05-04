@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
+import AvwapAnchorsPopover from './AvwapAnchorsPopover';
 import FeatureChart from './charts/FeatureChart';
 import IndicatorPanel from './IndicatorPanel';
 import OverlayChips from './OverlayChips';
@@ -65,6 +66,17 @@ export default function TickerDashboard({
     'session.feature_chart_show_avwap',
     false,
   );
+
+  // Per-ticker AVWAP anchors. Single global dict keyed by `<ticker>:<dataSource>`
+  // — `usePersistedState` is designed for stable keys, so we don't pass the
+  // dynamic ticker key directly. The dict approach has one load on mount,
+  // predictable persistence, and trivial memory footprint (a few KB even at
+  // hundreds of tickers).
+  const [avwapAnchorsAll, setAvwapAnchorsAll] = usePersistedState<
+    Record<string, string[]>
+  >('session.feature_chart_avwap_anchors', {});
+  const [avwapPopoverOpen, setAvwapPopoverOpen] = useState(false);
+  const ANCHOR_CAP = 5;
 
   const [history, setHistory] = useState<TickerHistory | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -386,6 +398,38 @@ export default function TickerDashboard({
     [indicatorOutputs, themeColors],
   );
 
+  // Per-ticker AVWAP anchor management. Key built from the active selection;
+  // empty string when no tile is selected (callbacks no-op in that case).
+  const avwapKey = selected ? `${selected.ticker}:${selected.dataSource}` : '';
+  const avwapAnchors = avwapKey ? (avwapAnchorsAll[avwapKey] ?? []) : [];
+
+  const addAvwapAnchor = (date: string) => {
+    if (!avwapKey) return;
+    setAvwapAnchorsAll((prev) => {
+      const current = prev[avwapKey] ?? [];
+      if (current.length >= ANCHOR_CAP) return prev; // soft cap (5)
+      if (current.includes(date)) return prev; // idempotent — duplicate clicks ignored
+      return { ...prev, [avwapKey]: [...current, date].sort() };
+    });
+  };
+  const removeAvwapAnchor = (date: string) => {
+    if (!avwapKey) return;
+    setAvwapAnchorsAll((prev) => ({
+      ...prev,
+      [avwapKey]: (prev[avwapKey] ?? []).filter((d) => d !== date),
+    }));
+  };
+  const clearAvwapAnchors = () => {
+    if (!avwapKey) return;
+    setAvwapAnchorsAll((prev) => ({ ...prev, [avwapKey]: [] }));
+  };
+
+  // Close the AVWAP popover whenever the selection or AVWAP toggle state
+  // makes it irrelevant. Avoids stale popover hanging across ticker swaps.
+  useEffect(() => {
+    setAvwapPopoverOpen(false);
+  }, [selected?.ticker, selected?.dataSource, showAvwap]);
+
   if (loadError) {
     return <div className="macro-tile__error">Failed to load: {loadError}</div>;
   }
@@ -441,9 +485,22 @@ export default function TickerDashboard({
                   id: 'avwap',
                   label: 'AVWAP',
                   description:
-                    'Anchored VWAP — click any bar to anchor; line shows the volume-weighted average price from that date forward. Auto-suppresses for tickers with no volume.',
+                    'Anchored VWAP — click any bar to anchor; line shows the volume-weighted average price from that date forward. Multi-anchor: click ⚙ to manage. Auto-suppresses for tickers with no volume.',
                   enabled: showAvwap,
                   onToggle: setShowAvwap,
+                  onSettings: showAvwap
+                    ? () => setAvwapPopoverOpen((v) => !v)
+                    : undefined,
+                  popover: avwapPopoverOpen && showAvwap && (
+                    <AvwapAnchorsPopover
+                      anchors={avwapAnchors}
+                      cap={ANCHOR_CAP}
+                      bars={chartBars}
+                      onRemove={removeAvwapAnchor}
+                      onClear={clearAvwapAnchors}
+                      onClose={() => setAvwapPopoverOpen(false)}
+                    />
+                  ),
                 },
               ]}
             />
@@ -464,6 +521,8 @@ export default function TickerDashboard({
               showVrvp={showVrvp}
               showDrawdown={showDrawdown}
               showAvwap={showAvwap}
+              avwapAnchors={avwapAnchors}
+              onAvwapAnchorClick={addAvwapAnchor}
             />
           )}
         </div>

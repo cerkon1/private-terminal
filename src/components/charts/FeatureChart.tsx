@@ -33,6 +33,11 @@ type Props = {
   showVrvp?: boolean;
   showDrawdown?: boolean;
   showAvwap?: boolean;
+  /** Multi-anchor AVWAP. Anchors are bar-dates (ISO yyyy-mm-dd); FeatureChart
+   *  reads-only — adding/removing happens in TickerDashboard via the popover.
+   *  Click on the price pane invokes `onAvwapAnchorClick` with the bar's date. */
+  avwapAnchors?: string[];
+  onAvwapAnchorClick?: (date: string) => void;
 };
 
 
@@ -47,6 +52,8 @@ export default function FeatureChart({
   showVrvp = false,
   showDrawdown = false,
   showAvwap = false,
+  avwapAnchors = [],
+  onAvwapAnchorClick,
 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
@@ -67,13 +74,6 @@ export default function FeatureChart({
     'session.feature_chart_show_volume',
     true,
   );
-  /** Anchor date for AVWAP. Transient by design — anchors are exploratory
-   *  ("since CPI dropped"), meaningful for an afternoon and stale a week
-   *  later. Cleared whenever bars change (new ticker selected) so an anchor
-   *  set on AAPL doesn't leak into MSFT, AND when the AVWAP toggle flips
-   *  off so re-toggling on starts fresh with the hint instead of resurrecting
-   *  the previous line. */
-  const [avwapAnchor, setAvwapAnchor] = useState<string | null>(null);
   const [pngFlash, setPngFlash] = useState(false);
 
   // Default visible window — last ~1 year (~252 trading days) for candlesticks,
@@ -94,18 +94,6 @@ export default function FeatureChart({
   useEffect(() => {
     setVisibleRange({ start: defaultStartPct, end: 100 });
   }, [defaultStartPct, bars.length]);
-
-  // Reset AVWAP anchor when the bar set changes — anchor on AAPL must not
-  // leak into MSFT. Transient by design.
-  useEffect(() => {
-    setAvwapAnchor(null);
-  }, [bars.length]);
-
-  // Also clear the anchor when AVWAP is toggled off, so re-toggling on
-  // shows the hint instead of resurrecting the previous line.
-  useEffect(() => {
-    if (!showAvwap) setAvwapAnchor(null);
-  }, [showAvwap]);
 
   // Init / teardown. Re-uses ResizeObserver to survive flex layout settle.
   useEffect(() => {
@@ -155,10 +143,12 @@ export default function FeatureChart({
   const showAvwapRef = useRef(showAvwap);
   const barsRef = useRef(bars);
   const modeRef = useRef(mode);
+  const onAnchorClickRef = useRef(onAvwapAnchorClick);
   useEffect(() => {
     showAvwapRef.current = showAvwap;
     barsRef.current = bars;
     modeRef.current = mode;
+    onAnchorClickRef.current = onAvwapAnchorClick;
   });
   useEffect(() => {
     const chart = chartRef.current;
@@ -181,7 +171,9 @@ export default function FeatureChart({
       const xVal = gridCoords[0];
       if (!Number.isFinite(xVal)) return;
       const idx = Math.max(0, Math.min(currentBars.length - 1, Math.round(xVal)));
-      setAvwapAnchor(currentBars[idx].date);
+      // Multi-anchor: caller appends to its array (with cap + idempotency
+      // logic in TickerDashboard). FeatureChart is read-only on the anchor list.
+      onAnchorClickRef.current?.(currentBars[idx].date);
     };
     zr.on('click', handler);
     return () => zr.off('click', handler);
@@ -202,7 +194,7 @@ export default function FeatureChart({
         showVrvp,
         showDrawdown,
         showAvwap,
-        avwapAnchor,
+        avwapAnchors,
       });
     }
     return buildLineOption({ title, units, observations, tooltipVisible });
@@ -221,7 +213,7 @@ export default function FeatureChart({
     showVrvp,
     showDrawdown,
     showAvwap,
-    avwapAnchor,
+    avwapAnchors,
   ]);
 
   useEffect(() => {
@@ -285,7 +277,7 @@ export default function FeatureChart({
         )}
       </div>
       <div ref={ref} className="feature-chart__canvas" />
-      {mode === 'candlestick' && showAvwap && avwapAnchor === null && (
+      {mode === 'candlestick' && showAvwap && avwapAnchors.length === 0 && (
         <div className="feature-chart__avwap-hint">
           Click any bar to anchor AVWAP
         </div>
@@ -383,7 +375,7 @@ function buildCandlestickOption({
   showVrvp,
   showDrawdown,
   showAvwap,
-  avwapAnchor,
+  avwapAnchors,
 }: {
   title: string;
   units: string;
@@ -397,7 +389,7 @@ function buildCandlestickOption({
   showVrvp: boolean;
   showDrawdown: boolean;
   showAvwap: boolean;
-  avwapAnchor: string | null;
+  avwapAnchors: string[];
 }): echarts.EChartsCoreOption {
   const theme = getChartTheme();
   const overlayIndicators = indicators.filter((i) => i.pane === 'overlay');
@@ -600,43 +592,49 @@ function buildCandlestickOption({
     }
   }
 
-  // Anchored VWAP overlay on the price pane. Cumulative volume-weighted
-  // average price from the anchor bar forward. Auto-suppressed when the
-  // ticker has no usable volume (DXY / FX / volumeless indices) — the
-  // computeAvwap helper returns an all-null array, which we detect and
-  // skip series push so the line + anchor marker don't appear at all.
-  if (showAvwap && avwapAnchor !== null) {
-    const anchorIdx = bars.findIndex((b) => b.date === avwapAnchor);
-    if (anchorIdx >= 0) {
+  // Anchored VWAP overlays on the price pane — one cumulative VWAP line per
+  // anchor. Auto-suppressed when the ticker has no usable volume (DXY / FX /
+  // volumeless indices): computeAvwap returns an all-null array, which we
+  // detect and skip per-anchor so the line + marker don't appear. All anchors
+  // share the same accent-amber color; ECharts tooltip names each line by
+  // anchor date so users can identify which AVWAP they're hovering over.
+  // Marker triangles for every anchor are accumulated into a single scatter
+  // series for one z-stack and one render pass.
+  if (showAvwap && avwapAnchors.length > 0) {
+    const markerCoords: Array<[number, number]> = [];
+    for (const anchorDate of avwapAnchors) {
+      const anchorIdx = bars.findIndex((b) => b.date === anchorDate);
+      if (anchorIdx < 0) continue;
       const avwapData = computeAvwap(bars, anchorIdx);
-      const anyValue = avwapData.some((v) => v !== null);
-      if (anyValue) {
-        series.push({
-          name: 'AVWAP',
-          type: 'line',
-          xAxisIndex: 0,
-          yAxisIndex: 0,
-          data: avwapData,
-          showSymbol: false,
-          connectNulls: false,
-          lineStyle: { color: theme.accentAmber, width: 1.5 },
-          itemStyle: { color: theme.accentAmber },
-          z: 8, // above SMMA fills (default z), below candles (z:10)
-          markPoint: {
-            symbol: 'triangle',
-            symbolSize: 10,
-            symbolRotate: 180,
-            silent: true,
-            label: { show: false },
-            itemStyle: { color: theme.accentAmber },
-            data: [
-              {
-                coord: [anchorIdx, avwapData[anchorIdx] ?? bars[anchorIdx].close],
-              },
-            ],
-          },
-        });
-      }
+      if (!avwapData.some((v) => v !== null)) continue;
+      series.push({
+        name: `AVWAP @ ${anchorDate}`,
+        type: 'line',
+        xAxisIndex: 0,
+        yAxisIndex: 0,
+        data: avwapData,
+        showSymbol: false,
+        connectNulls: false,
+        lineStyle: { color: theme.accentAmber, width: 1.5 },
+        itemStyle: { color: theme.accentAmber },
+        z: 8, // above SMMA fills (default z), below candles (z:10)
+      });
+      markerCoords.push([anchorIdx, avwapData[anchorIdx] ?? bars[anchorIdx].close]);
+    }
+    if (markerCoords.length > 0) {
+      series.push({
+        name: 'AVWAP anchors',
+        type: 'scatter',
+        xAxisIndex: 0,
+        yAxisIndex: 0,
+        data: markerCoords,
+        symbol: 'triangle',
+        symbolSize: 10,
+        symbolRotate: 180,
+        silent: true,
+        itemStyle: { color: theme.accentAmber },
+        z: 9,
+      });
     }
   }
 
