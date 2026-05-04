@@ -932,12 +932,33 @@ html, body, #root {
   padding: var(--space-sm);
 }
 
+/* ── Chip strip (per-ticker indicators + app-wide overlays) ────────── */
+/* The strip wraps `IndicatorPanel` (Rust-backed per-ticker indicators) and
+   `OverlayChips` (frontend app-wide overlays — VRVP / DD / AVWAP) into one
+   visual cluster pushed to the right of the FeatureChart header. The thin
+   vertical separator hints at the state-shape difference; hover tips on
+   each chip carry the description. */
+.chip-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.chip-strip__separator {
+  width: 1px;
+  height: 18px;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+}
+
 /* ── Indicator panel (checkbox chips) ────────── */
-.indicator-panel {
+.indicator-panel,
+.overlay-chips {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  margin-left: auto;
   flex-wrap: wrap;
 }
 

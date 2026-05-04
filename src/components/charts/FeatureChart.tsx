@@ -27,6 +27,12 @@ type Props = {
   indicators?: IndicatorOutput[];
   /** Shared ECharts `connect()` group id — lets future multi-chart views sync crosshairs. */
   connectGroup?: string;
+  /** App-wide overlay toggles. Lifted to TickerDashboard so they can be
+   *  controlled from the chip strip alongside per-ticker indicators. Defaults
+   *  cover the line-mode (MACRO) caller which doesn't pass them. */
+  showVrvp?: boolean;
+  showDrawdown?: boolean;
+  showAvwap?: boolean;
 };
 
 
@@ -38,6 +44,9 @@ export default function FeatureChart({
   bars = [],
   indicators = [],
   connectGroup = 'macro',
+  showVrvp = false,
+  showDrawdown = false,
+  showAvwap = false,
 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
@@ -57,18 +66,6 @@ export default function FeatureChart({
   const [showVolume, setShowVolume] = usePersistedState<boolean>(
     'session.feature_chart_show_volume',
     true,
-  );
-  const [showVrvp, setShowVrvp] = usePersistedState<boolean>(
-    'session.feature_chart_show_vrvp',
-    true,
-  );
-  const [showDrawdown, setShowDrawdown] = usePersistedState<boolean>(
-    'session.feature_chart_show_drawdown',
-    false,
-  );
-  const [showAvwap, setShowAvwap] = usePersistedState<boolean>(
-    'session.feature_chart_show_avwap',
-    false,
   );
   /** Anchor date for AVWAP. Transient by design — anchors are exploratory
    *  ("since CPI dropped"), meaningful for an afternoon and stale a week
@@ -272,30 +269,6 @@ export default function FeatureChart({
               title="Show / hide the volume pane (saves vertical room for the price chart)"
             >
               VOL
-            </button>
-            <button
-              type="button"
-              className={`feature-chart__tool ${showVrvp ? 'feature-chart__tool--active' : ''}`}
-              onClick={() => setShowVrvp((v) => !v)}
-              title="Volume Profile — overlays a horizontal histogram of total volume by price level on the right side of the price pane. POC bin highlighted yellow."
-            >
-              VRVP
-            </button>
-            <button
-              type="button"
-              className={`feature-chart__tool ${showDrawdown ? 'feature-chart__tool--active' : ''}`}
-              onClick={() => setShowDrawdown((v) => !v)}
-              title="Drawdown — subpane below price showing % decline from the running peak. Floor = max drawdown over the visible window."
-            >
-              DD
-            </button>
-            <button
-              type="button"
-              className={`feature-chart__tool ${showAvwap ? 'feature-chart__tool--active' : ''}`}
-              onClick={() => setShowAvwap((v) => !v)}
-              title="Anchored VWAP — click any bar to anchor; line shows the volume-weighted average price from that date forward. Auto-suppresses for tickers with no volume."
-            >
-              AVWAP
             </button>
           </>
         )}

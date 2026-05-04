@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 
 import FeatureChart from './charts/FeatureChart';
 import IndicatorPanel from './IndicatorPanel';
+import OverlayChips from './OverlayChips';
 import RangeSwitch from './RangeSwitch';
 import TickerTile from './TickerTile';
 import TileContextMenu, { type TileMenuItem } from './TileContextMenu';
@@ -47,6 +48,22 @@ export default function TickerDashboard({
   const [activeRange, setActiveRange] = usePersistedState<TileRange>(
     'session.tile_range',
     '1D',
+  );
+
+  // App-wide chart-overlay toggles. Lifted from FeatureChart so the chip strip
+  // (sibling to FeatureChart) can render them as toggles. Same KV keys as
+  // before — existing user persistence carries over without migration.
+  const [showVrvp, setShowVrvp] = usePersistedState<boolean>(
+    'session.feature_chart_show_vrvp',
+    true,
+  );
+  const [showDrawdown, setShowDrawdown] = usePersistedState<boolean>(
+    'session.feature_chart_show_drawdown',
+    false,
+  );
+  const [showAvwap, setShowAvwap] = usePersistedState<boolean>(
+    'session.feature_chart_show_avwap',
+    false,
   );
 
   const [history, setHistory] = useState<TickerHistory | null>(null);
@@ -393,11 +410,44 @@ export default function TickerDashboard({
               {selected.displayName ?? selected.ticker}
             </h2>
           </div>
-          <IndicatorPanel
-            indicators={availableIndicators}
-            enabledIds={enabledIds}
-            onToggle={toggleIndicator}
-          />
+          <div className="chip-strip">
+            <IndicatorPanel
+              indicators={availableIndicators}
+              enabledIds={enabledIds}
+              onToggle={toggleIndicator}
+            />
+            {availableIndicators.length > 0 && (
+              <div className="chip-strip__separator" aria-hidden="true" />
+            )}
+            <OverlayChips
+              overlays={[
+                {
+                  id: 'vrvp',
+                  label: 'VRVP',
+                  description:
+                    'Volume Profile — translucent right-side histogram of total volume by price level. POC bin (heaviest volume) in yellow. Auto-suppresses for zero-volume tickers.',
+                  enabled: showVrvp,
+                  onToggle: setShowVrvp,
+                },
+                {
+                  id: 'drawdown',
+                  label: 'DD',
+                  description:
+                    'Drawdown — subpane below price showing % decline from the running peak. Floor = max drawdown over the visible window.',
+                  enabled: showDrawdown,
+                  onToggle: setShowDrawdown,
+                },
+                {
+                  id: 'avwap',
+                  label: 'AVWAP',
+                  description:
+                    'Anchored VWAP — click any bar to anchor; line shows the volume-weighted average price from that date forward. Auto-suppresses for tickers with no volume.',
+                  enabled: showAvwap,
+                  onToggle: setShowAvwap,
+                },
+              ]}
+            />
+          </div>
         </div>
         <div className="feature-chart-pane__chart">
           {historyError && <div className="macro-tile__error">{historyError}</div>}
@@ -411,6 +461,9 @@ export default function TickerDashboard({
               mode="candlestick"
               bars={chartBars}
               indicators={themedIndicators}
+              showVrvp={showVrvp}
+              showDrawdown={showDrawdown}
+              showAvwap={showAvwap}
             />
           )}
         </div>
