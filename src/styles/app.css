@@ -2098,6 +2098,60 @@ html, body, #root {
   line-height: 1.5;
 }
 
+/* Privacy tab — commitment list + outbound transparency table. The whole
+   tab is the brand-thesis surface; styling stays within the existing
+   .about-card visual language so it reads as part of Settings, not as a
+   marketing splash. */
+.privacy-list {
+  margin: 0;
+  padding-left: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+.privacy-list strong {
+  color: var(--text-primary);
+}
+
+.privacy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.privacy-table thead th {
+  text-align: left;
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.privacy-table tbody td {
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.privacy-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.privacy-table td.mono {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
 .about-tips__key {
   font-family: var(--font-mono);
   background: var(--bg-elevated);

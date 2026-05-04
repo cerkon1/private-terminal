@@ -4,6 +4,7 @@ import AboutTab from './settings/AboutTab';
 import ApiKeysTab from './settings/ApiKeysTab';
 import AppearanceTab from './settings/AppearanceTab';
 import FeaturesTab from './settings/FeaturesTab';
+import PrivacyTab from './settings/PrivacyTab';
 import StorageTab from './settings/StorageTab';
 import { ThemeColors } from '../types/theme';
 
@@ -13,13 +14,14 @@ type Props = {
   setThemeColors: (next: ThemeColors) => void;
 };
 
-type TabId = 'api' | 'appearance' | 'storage' | 'features' | 'about';
+type TabId = 'api' | 'appearance' | 'storage' | 'features' | 'privacy' | 'about';
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'api', label: 'API Keys' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'storage', label: 'Storage' },
   { id: 'features', label: 'Features' },
+  { id: 'privacy', label: 'Privacy' },
   { id: 'about', label: 'About' },
 ];
 
@@ -56,6 +58,7 @@ export default function SettingsModal({ onClose, themeColors, setThemeColors }: 
           )}
           {tab === 'storage' && <StorageTab />}
           {tab === 'features' && <FeaturesTab />}
+          {tab === 'privacy' && <PrivacyTab />}
           {tab === 'about' && <AboutTab />}
         </div>
 
