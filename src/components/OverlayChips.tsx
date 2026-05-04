@@ -56,7 +56,7 @@ export default function OverlayChips({ overlays }: Props) {
               title={`${o.label} settings`}
               aria-label={`${o.label} settings`}
             >
-              ⚙
+              ▾
             </button>
           )}
           {o.popover}

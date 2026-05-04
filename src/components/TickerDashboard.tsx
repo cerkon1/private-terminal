@@ -422,6 +422,12 @@ export default function TickerDashboard({
   const clearAvwapAnchors = () => {
     if (!avwapKey) return;
     setAvwapAnchorsAll((prev) => ({ ...prev, [avwapKey]: [] }));
+    // "Clear all" is the exit ramp — user is done with this anchor set.
+    // Disable the indicator so the chart returns to a clean state with no
+    // dangling "Click any bar to anchor" hint. Re-toggling AVWAP later
+    // starts a fresh anchor session. The existing effect closes the popover
+    // automatically on `showAvwap=false`.
+    setShowAvwap(false);
   };
 
   // Close the AVWAP popover whenever the selection or AVWAP toggle state
