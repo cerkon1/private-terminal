@@ -37,17 +37,15 @@ export default function OverlayChips({ overlays }: Props) {
     <div className="overlay-chips">
       {overlays.map((o) => (
         <div key={o.id} className="indicator-chip-wrap">
-          <label
+          <button
+            type="button"
             className={`indicator-chip ${o.enabled ? 'indicator-chip--on' : ''}`}
             title={o.description}
+            aria-pressed={o.enabled}
+            onClick={() => o.onToggle(!o.enabled)}
           >
-            <input
-              type="checkbox"
-              checked={o.enabled}
-              onChange={(e) => o.onToggle(e.target.checked)}
-            />
-            <span>{o.label}</span>
-          </label>
+            {o.label}
+          </button>
           {o.onSettings && (
             <button
               type="button"

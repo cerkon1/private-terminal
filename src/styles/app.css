@@ -971,11 +971,15 @@ html, body, #root {
   margin-right: var(--space-xs);
 }
 
+/* Toggle chip — `<button>` with aria-pressed. The chip's own state coloring
+   (cyan border + tinted bg when on) is the visual signal; the older
+   <input type="checkbox"> inside the chip was redundant and got dropped. */
 .indicator-chip {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
   padding: var(--space-xxs, 3px) var(--space-sm);
+  background: transparent;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
@@ -997,11 +1001,12 @@ html, body, #root {
   background: rgba(var(--accent-cyan-rgb), 0.06);
 }
 
-.indicator-chip input[type='checkbox'] {
-  margin: 0;
-  accent-color: var(--accent-cyan);
-  width: 12px;
-  height: 12px;
+.indicator-chip--on:hover {
+  /* Avoid the on-state hover painting back to text-primary gray — keep cyan,
+     just brighten the bg tint slightly. */
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: rgba(var(--accent-cyan-rgb), 0.12);
 }
 
 /* Wrap that pairs a chip with optional gear button + popover. The wrap is
@@ -1015,28 +1020,39 @@ html, body, #root {
   gap: 0;
 }
 
-/* Small gear button rendered next to a chip. Borrows the chip's border
-   styling for visual coherence; clicking it doesn't toggle the chip
-   because it lives outside the <label> element. */
+/* Square off the chip's right corners when a gear button is attached, so
+   chip + gear read as one continuous element instead of a notched pair.
+   :has() avoids needing a separate "has-gear" class on the wrap. */
+.indicator-chip-wrap:has(.indicator-chip__gear) > .indicator-chip {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Small chevron button rendered next to a chip — opens the indicator's
+   settings popover. Only ever shown while the parent chip is ON (caller
+   gates `onSettings`), so the styling adopts the chip's on-state cyan
+   directly: same border + tinted bg + cyan text. Resting opacity 0.55 so
+   it sits visually as a continuation of the chip, not a separate badge;
+   hover pulls opacity to 1 — no color jump, no border flash. */
 .indicator-chip__gear {
-  background: transparent;
-  border: 1px solid var(--border-subtle);
+  background: rgba(var(--accent-cyan-rgb), 0.06);
+  border: 1px solid var(--accent-cyan);
   border-left: none;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
   border-top-right-radius: var(--radius-sm);
   border-bottom-right-radius: var(--radius-sm);
-  color: var(--text-tertiary);
+  color: var(--accent-cyan);
   font-size: 11px;
   line-height: 1;
   padding: var(--space-xxs, 3px) var(--space-xs);
   cursor: pointer;
-  transition: all 120ms ease;
+  opacity: 0.55;
+  transition: opacity 120ms ease;
 }
 
 .indicator-chip__gear:hover {
-  color: var(--accent-cyan);
-  border-color: var(--accent-cyan);
+  opacity: 1;
 }
 
 /* AVWAP anchors popover. Anchored to the AVWAP chip via the parent

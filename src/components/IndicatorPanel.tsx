@@ -24,18 +24,16 @@ export default function IndicatorPanel({ indicators, enabledIds, onToggle }: Pro
       {indicators.map((ind) => {
         const on = enabledIds.has(ind.id);
         return (
-          <label
+          <button
             key={ind.id}
+            type="button"
             className={`indicator-chip ${on ? 'indicator-chip--on' : ''}`}
             title={DESCRIPTIONS[ind.id] ?? ind.displayName}
+            aria-pressed={on}
+            onClick={() => onToggle(ind.id, !on)}
           >
-            <input
-              type="checkbox"
-              checked={on}
-              onChange={(e) => onToggle(ind.id, e.target.checked)}
-            />
-            <span>{ind.displayName}</span>
-          </label>
+            {ind.displayName}
+          </button>
         );
       })}
     </div>
