@@ -87,7 +87,7 @@ only — not background.
 
 ## Install
 
-Download the latest installer or portable EXE from
+Download the latest installer from
 [GitHub Releases](https://github.com/cerkon1/private-terminal/releases).
 
 **Windows 10/11.** No code-signing certificate yet, so SmartScreen will
