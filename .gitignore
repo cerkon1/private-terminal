@@ -55,6 +55,12 @@ nul
 # This whole folder is for items that must NEVER cross into git history.
 infrastructure/
 
+# Internal session work — design docs, progress logs, decisions, memory, screenshots.
+# Tracked through PT v1.0.0 (full history pushed for OSS-norm transparency on public launch).
+# Stopped tracking after v1.0.0 — session logs may reference private sibling repos and
+# carry internal voice that doesn't need to be in the public record.
+.projects/
+
 # Defensive catch-alls
 **/api_keys.txt
 **/*credentials*.txt
