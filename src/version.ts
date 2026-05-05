@@ -3,4 +3,4 @@
 //   - src-tauri/Cargo.toml
 //   - src-tauri/tauri.conf.json   (wins over Cargo.toml for bundle metadata)
 // Keep all four in sync.
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.0.1';
