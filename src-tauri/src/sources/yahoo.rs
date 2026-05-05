@@ -34,6 +34,15 @@ pub struct YahooQuote {
     pub currency: Option<String>,
 }
 
+/// Combined fetch result: latest quote meta + recent daily bars from a single
+/// `/v8/chart` call. REFRESH on the dashboards uses this so quote_cache and
+/// the recent tail of price_history stay in sync without making two HTTP
+/// round trips per ticker.
+pub struct YahooSnapshot {
+    pub quote: YahooQuote,
+    pub bars: Vec<Bar>,
+}
+
 fn client() -> reqwest::Client {
     reqwest::Client::builder()
         .user_agent(USER_AGENT)
@@ -68,11 +77,27 @@ async fn get_chart(symbol: &str, range: &str) -> Result<ChartResult, YahooError>
         .ok_or_else(|| YahooError::Api(format!("No chart data for {}", symbol)))
 }
 
-/// Fetch a single quote from the chart endpoint's `meta` payload. Used for the
-/// ticker dashboard where we just need price + previous-close diff + volume.
-pub async fn fetch_quote(symbol: &str) -> Result<YahooQuote, YahooError> {
-    let result = get_chart(symbol, "1d").await?;
-    let meta = result.meta;
+/// Combined fetch: latest quote + recent daily bars from a single
+/// `/v8/chart` call (range=5d). Used by the dashboard REFRESH path so a
+/// click writes both the live price (quote_cache) and the most recent
+/// trading-day closes (price_history). 5d covers a normal weekend gap;
+/// after a Monday close the response carries last week's bars including
+/// the most recent settled close.
+pub async fn fetch_snapshot(symbol: &str) -> Result<YahooSnapshot, YahooError> {
+    let result = get_chart(symbol, "5d").await?;
+    let timestamps = result.timestamp.unwrap_or_default();
+    let chart_quote = result
+        .indicators
+        .quote
+        .and_then(|mut q| q.pop())
+        .unwrap_or_default();
+    Ok(YahooSnapshot {
+        bars: bars_from_chart(timestamps, chart_quote),
+        quote: quote_from_meta(symbol, result.meta),
+    })
+}
+
+fn quote_from_meta(symbol: &str, meta: ChartMeta) -> YahooQuote {
     let price = meta.regular_market_price;
     let prev_close = meta.previous_close.or(meta.chart_previous_close);
     let (change_abs, change_pct) = match (price, prev_close) {
@@ -82,7 +107,7 @@ pub async fn fetch_quote(symbol: &str) -> Result<YahooQuote, YahooError> {
         }
         _ => (None, None),
     };
-    Ok(YahooQuote {
+    YahooQuote {
         symbol: meta.symbol.unwrap_or_else(|| symbol.to_string()),
         regular_market_price: price,
         regular_market_change: change_abs,
@@ -90,7 +115,7 @@ pub async fn fetch_quote(symbol: &str) -> Result<YahooQuote, YahooError> {
         regular_market_volume: meta.regular_market_volume,
         market_cap: None, // chart endpoint doesn't expose market cap
         currency: meta.currency,
-    })
+    }
 }
 
 #[derive(Debug)]
@@ -167,7 +192,10 @@ pub async fn fetch_chart(symbol: &str, range: &str) -> Result<Vec<Bar>, YahooErr
         .quote
         .and_then(|mut q| q.pop())
         .unwrap_or_default();
+    Ok(bars_from_chart(timestamps, quote))
+}
 
+fn bars_from_chart(timestamps: Vec<i64>, quote: ChartQuote) -> Vec<Bar> {
     let len = timestamps.len();
     let mut bars = Vec::with_capacity(len);
     for i in 0..len {
@@ -186,5 +214,5 @@ pub async fn fetch_chart(symbol: &str, range: &str) -> Result<Vec<Bar>, YahooErr
     }
     // Drop rows where close is missing (Yahoo pads around holidays with nulls).
     bars.retain(|b| b.close.is_some());
-    Ok(bars)
+    bars
 }

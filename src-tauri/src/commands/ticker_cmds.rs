@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
+use chrono::{DateTime, Datelike, Duration, NaiveDate, Timelike, Utc, Weekday};
+use chrono_tz::America::New_York;
 use futures::future::join_all;
 use serde::Serialize;
 use tauri::State;
@@ -12,11 +13,6 @@ use crate::AppState;
 /// Quote cache TTL. Adaptive (5min market-hours / 1h off-hours) is deferred
 /// per `memory/m3_ticker_decisions.md`; 15 min flat is the M3 default.
 const QUOTE_TTL_MINUTES: i64 = 15;
-
-/// History freshness window. If the most recent bar in `price_history` is
-/// within this many days, we don't re-fetch the chart on tile open. 4 days
-/// covers weekends + one holiday.
-const HISTORY_FRESH_DAYS: i64 = 4;
 
 const HISTORY_RANGE: &str = "5y";
 
@@ -195,8 +191,14 @@ async fn fetch_and_upsert_quote(state: &AppState, symbol: &str) -> Result<(), St
     // Yahoo fetch outside the lock; on failure persist the error so bad
     // symbols stay self-diagnosing across sessions (S22). Success path's
     // upsert_quote clears the error column unconditionally.
-    let q = match yahoo::fetch_quote(symbol).await {
-        Ok(q) => q,
+    //
+    // `fetch_snapshot` pulls the live quote AND the recent daily bars from a
+    // single /v8/chart call (range=5d). REFRESH thus keeps both quote_cache
+    // and the recent tail of price_history fresh — earlier the dashboard's
+    // history would lag whenever the user hadn't opened the feature chart
+    // for a ticker (chart-open was the only path that wrote bars).
+    let snap = match yahoo::fetch_snapshot(symbol).await {
+        Ok(s) => s,
         Err(e) => {
             let msg = e.to_string();
             if let Ok(db) = state.db.lock() {
@@ -207,15 +209,21 @@ async fn fetch_and_upsert_quote(state: &AppState, symbol: &str) -> Result<(), St
     };
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db.upsert_quote(
-        &q.symbol,
+        &snap.quote.symbol,
         "yahoo",
-        q.regular_market_price,
-        q.currency.as_deref(),
-        q.regular_market_change_percent,
-        q.regular_market_change,
-        q.market_cap,
-        q.regular_market_volume,
+        snap.quote.regular_market_price,
+        snap.quote.currency.as_deref(),
+        snap.quote.regular_market_change_percent,
+        snap.quote.regular_market_change,
+        snap.quote.market_cap,
+        snap.quote.regular_market_volume,
     )?;
+    if !snap.bars.is_empty() {
+        // Idempotent ON CONFLICT upsert — overlapping dates against the
+        // existing 5y history just rewrite the same closes. A failure here
+        // doesn't poison the quote write above; next REFRESH will retry.
+        let _ = db.upsert_price_bars(symbol, "yahoo", &snap.bars);
+    }
     Ok(())
 }
 
@@ -225,19 +233,20 @@ pub async fn get_ticker_history(
     data_source: String,
     state: State<'_, AppState>,
 ) -> Result<TickerHistory, String> {
-    // Freshness check on existing bars: if latest bar is within HISTORY_FRESH_DAYS
-    // of today, skip the Yahoo chart fetch.
+    // Freshness check: compare the latest saved bar against the most recent
+    // settled US-equity close (computed from NY time + day-of-week). If the
+    // latest saved bar is older, fetch fresh history. If it matches, skip
+    // the Yahoo call. This is the "is my data current?" rule — avoids the
+    // off-by-one of the old N-days-since-today heuristic which missed the
+    // exactly-4-day case after a normal weekend.
     let needs_fetch = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         match db.latest_bar_date(&ticker, &data_source)? {
             None => true,
-            Some(latest) => {
-                let today = Utc::now().date_naive();
-                match NaiveDate::parse_from_str(&latest, "%Y-%m-%d") {
-                    Ok(d) => (today - d).num_days() > HISTORY_FRESH_DAYS,
-                    Err(_) => true,
-                }
-            }
+            Some(latest) => match NaiveDate::parse_from_str(&latest, "%Y-%m-%d") {
+                Ok(d) => d < expected_latest_us_close(),
+                Err(_) => true,
+            },
         }
     };
 
@@ -292,5 +301,32 @@ fn parse_rfc3339(s: &str) -> Option<DateTime<Utc>> {
     DateTime::parse_from_rfc3339(s)
         .ok()
         .map(|dt| dt.with_timezone(&Utc))
+}
+
+/// Most recent calendar date that should have a settled US-equity daily
+/// close, in NY local time. Used by the chart-open staleness check.
+///
+/// Rules:
+///   - Weekday in NY at or after 16:00 ET → today.
+///   - Weekday in NY before 16:00 ET → previous trading day (today's bar
+///     hasn't settled yet).
+///   - Saturday / Sunday → most recent Friday.
+///
+/// Does NOT account for US market holidays. On a holiday Monday this
+/// returns the holiday date; saved data won't match and the app will make
+/// one needless Yahoo call that returns no new bars. Cheap, harmless.
+fn expected_latest_us_close() -> NaiveDate {
+    let ny = Utc::now().with_timezone(&New_York);
+    let mut date = ny.date_naive();
+    let post_close = ny.hour() >= 16;
+
+    let is_weekday = !matches!(date.weekday(), Weekday::Sat | Weekday::Sun);
+    if is_weekday && !post_close {
+        date = date.pred_opt().unwrap_or(date);
+    }
+    while matches!(date.weekday(), Weekday::Sat | Weekday::Sun) {
+        date = date.pred_opt().unwrap_or(date);
+    }
+    date
 }
 
