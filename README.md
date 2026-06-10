@@ -6,7 +6,11 @@ the last five years.
 
 No accounts. No telemetry. No cloud sync. Your data stays on your machine.
 
-Built by the team behind [PrivateACB](https://privateacb.com).
+Built by the team behind [PrivateACB](https://www.privateacb.com/), the
+privacy-first desktop crypto tax calculator. Product page:
+[privateacb.com/terminal](https://www.privateacb.com/terminal/).
+
+![Pulse — cross-section heatmap of your watchlist plus 29 FRED macro series](docs/screenshots/pulse.png)
 
 ---
 
@@ -39,6 +43,8 @@ state), RSI(14), ATR(14), Volume Profile (VRVP), Drawdown subpane, and
 multi-anchor Anchored VWAP. Click anywhere on the price pane to drop an
 AVWAP anchor; up to five per ticker, persisted per-ticker.
 
+![Multi-indicator candlestick chart — SMMA Ribbon, RSI, ATR, Volume Profile, Anchored VWAP](docs/screenshots/feature-chart-btc.png)
+
 **Analysis section — seven cross-asset tools.** Correlations, Pairs ratios,
 Relative Rotation Graph (RRG), Yield Curve, Recession Probability,
 Financial Conditions, Macro Regime Quadrant. Each tab includes
@@ -56,7 +62,9 @@ series, and Analysis tabs. Jump anywhere with two keystrokes.
 ## Privacy stance
 
 The reason this app exists is to demonstrate that private free software is
-real. Detailed list lives in the app at Settings → Privacy. Summary:
+real — the same case we make for tax software in
+[Why Local?](https://www.privateacb.com/why-local/). Detailed list lives in
+the app at Settings → Privacy. Summary:
 
 - **No accounts.** No login, no signup, no email collection.
 - **No telemetry.** The app reports nothing back. Not usage, not errors,
@@ -156,8 +164,10 @@ No SaaS dependencies. No cloud services. No external state.
 
 ## Status
 
-Version 1.0.0 ships from this repo. Active development continues — see
-the [GitHub Issues](https://github.com/cerkon1/private-terminal/issues) for
+The latest version ships from this repo — see
+[Releases](https://github.com/cerkon1/private-terminal/releases). Active
+development continues; see the
+[GitHub Issues](https://github.com/cerkon1/private-terminal/issues) for
 roadmap items and bug reports.
 
 This is a personal-scale project, not a startup. Issue responses are
