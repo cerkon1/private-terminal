@@ -105,6 +105,21 @@ is on the v1.x roadmap.
 Mac and Linux builds are not currently provided. Tauri supports them; the
 codebase is portable; we just haven't packaged for them. PRs welcome.
 
+### Verifying a release
+
+Releases are built by the [release workflow](.github/workflows/release.yml)
+on GitHub Actions and ship with a `SHA256SUMS.txt` plus GitHub
+[build provenance attestations](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations),
+so you can verify that what you're running is what's in this repo:
+
+```powershell
+# 1. Checksum — compare against SHA256SUMS.txt from the release page
+Get-FileHash .\private-terminal-vX.Y.Z-x64-setup.exe -Algorithm SHA256
+
+# 2. Provenance — proves the binary was built by GitHub Actions from this repo
+gh attestation verify .\private-terminal-vX.Y.Z-x64-setup.exe --repo cerkon1/private-terminal
+```
+
 ---
 
 ## Build from source
