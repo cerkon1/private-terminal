@@ -1,6 +1,6 @@
 [package]
 name = "personal-terminal"
-version = "1.0.1"
+version = "1.0.2"
 description = "Private Terminal — local-first desktop research dashboard for personal market study"
 edition = "2021"
 license = "MIT"
