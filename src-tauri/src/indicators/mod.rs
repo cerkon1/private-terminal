@@ -5,7 +5,7 @@
 //! it reads the generic `IndicatorOutput` shape (series + markers + regions)
 //! and renders via ECharts without per-indicator knowledge.
 //!
-//! Math is ported verbatim from `E:/Users/PBL/Documents/Dev/trendscope/src/trendscope/indicators.py`.
+//! Math is ported verbatim from the (now-deleted) trendscope project's `src/trendscope/indicators.py`.
 //! Do NOT re-tune `confirm_bars` or SMMA lengths without calibration data —
 //! trendscope's CLAUDE.md "Tuning journey" explicitly says v1 + confirm=3 is
 //! "good enough"; changing defaults has been measured to produce marginal shifts.
