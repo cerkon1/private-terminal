@@ -36,17 +36,15 @@ pub fn smma(src: &[Option<f64>], length: usize) -> Vec<Option<f64>> {
 
     let inv = 1.0 / length as f64;
     let factor = (length - 1) as f64 * inv;
+    // Recursion state lives here, not in `out[i - 1]`: a gap bar emits None
+    // but must not end the recursion — the next valid bar resumes from the
+    // last valid SMMA. (Reading state back from `out` meant one partial Yahoo
+    // row blanked the Ribbon / ATR / RSI for the rest of the history.)
+    let mut prev = seed;
     for i in (seed_end + 1)..n {
-        let prev = match out[i - 1] {
-            Some(v) => v,
-            None => {
-                // Bar i-1 was invalid; can't continue recursion. Leave None.
-                continue;
-            }
-        };
-        match src[i] {
-            Some(v) => out[i] = Some(prev * factor + v * inv),
-            None => {} // gap; leave None and the next valid bar resumes
+        if let Some(v) = src[i] {
+            prev = prev * factor + v * inv;
+            out[i] = Some(prev);
         }
     }
 
@@ -71,4 +69,42 @@ fn find_seed_window(src: &[Option<f64>], length: usize) -> Option<usize> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::smma;
+
+    fn approx(a: Option<f64>, b: f64) -> bool {
+        a.is_some_and(|a| (a - b).abs() < 1e-9)
+    }
+
+    #[test]
+    fn seeds_with_sma_then_recurses() {
+        let src: Vec<Option<f64>> = [1.0, 2.0, 3.0, 4.0, 5.0].iter().map(|&v| Some(v)).collect();
+        let out = smma(&src, 3);
+        assert_eq!(out[0], None);
+        assert_eq!(out[1], None);
+        assert!(approx(out[2], 2.0));
+        assert!(approx(out[3], 8.0 / 3.0)); // (2*2 + 4) / 3
+        assert!(approx(out[4], 31.0 / 9.0)); // (8/3*2 + 5) / 3
+    }
+
+    #[test]
+    fn gap_emits_none_and_recursion_resumes() {
+        let src = vec![Some(1.0), Some(2.0), Some(3.0), None, Some(5.0), Some(6.0)];
+        let out = smma(&src, 3);
+        assert!(approx(out[2], 2.0));
+        assert_eq!(out[3], None);
+        assert!(approx(out[4], 3.0)); // (2*2 + 5) / 3
+        assert!(approx(out[5], 4.0)); // (3*2 + 6) / 3
+    }
+
+    #[test]
+    fn seed_backs_off_past_leading_gap() {
+        let src = vec![Some(9.0), None, Some(1.0), Some(2.0), Some(3.0)];
+        let out = smma(&src, 3);
+        assert_eq!(&out[..4], &[None, None, None, None]);
+        assert!(approx(out[4], 2.0));
+    }
 }
