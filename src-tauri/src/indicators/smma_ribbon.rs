@@ -311,3 +311,48 @@ fn state_flip_markers(bars: &[Bar], state: &[&'static str]) -> Vec<IndicatorMark
     }
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::SmmaRibbonIndicator;
+    use crate::indicators::{Bar, Indicator};
+
+    fn bars(closes: impl Iterator<Item = f64>) -> Vec<Bar> {
+        closes
+            .enumerate()
+            .map(|(i, c)| Bar {
+                date: format!("d{i:04}"),
+                open: Some(c),
+                high: Some(c + 1.0),
+                low: Some(c - 1.0),
+                close: Some(c),
+                volume: None,
+            })
+            .collect()
+    }
+
+    fn last_regime(bars: &[Bar]) -> String {
+        let params = serde_json::json!({ "lengths": [15, 19, 25, 29], "confirm_bars": 3 });
+        let out = SmmaRibbonIndicator.compute(bars, &params).unwrap();
+        out.regions.last().map(|r| r.label.clone()).unwrap_or_default()
+    }
+
+    #[test]
+    fn steady_uptrend_is_bullish() {
+        assert_eq!(last_regime(&bars((0..120).map(|i| 100.0 + i as f64))), "bullish");
+    }
+
+    #[test]
+    fn steady_downtrend_is_bearish() {
+        assert_eq!(last_regime(&bars((0..120).map(|i| 300.0 - i as f64))), "bearish");
+    }
+
+    #[test]
+    fn regime_survives_a_partial_bar() {
+        // One bar with no high/low (hl2 = None) must not blank the regime.
+        let mut b = bars((0..120).map(|i| 100.0 + i as f64));
+        b[60].high = None;
+        b[60].low = None;
+        assert_eq!(last_regime(&b), "bullish");
+    }
+}

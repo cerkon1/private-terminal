@@ -93,3 +93,54 @@ impl Indicator for AtrIndicator {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::AtrIndicator;
+    use crate::indicators::{Bar, Indicator};
+
+    fn bar(h: f64, l: f64, c: f64) -> Bar {
+        Bar { date: String::new(), open: Some(c), high: Some(h), low: Some(l), close: Some(c), volume: None }
+    }
+
+    fn atr(bars: &[Bar], length: usize) -> Vec<Option<f64>> {
+        AtrIndicator
+            .compute(bars, &serde_json::json!({ "length": length }))
+            .unwrap()
+            .series[0]
+            .data
+            .iter()
+            .map(|p| p.value)
+            .collect()
+    }
+
+    #[test]
+    fn true_range_and_wilder_smoothing_known_answer() {
+        // TR: bar0 = 10-8 = 2 (no prev close); bar1 = max(3, |12-9|, |9-9|) = 3;
+        // bar2 = max(1, |11-11|, |10-11|) = 1. ATR(2): seed (2+3)/2 = 2.5,
+        // then (2.5*1 + 1)/2 = 1.75.
+        let bars = [bar(10.0, 8.0, 9.0), bar(12.0, 9.0, 11.0), bar(11.0, 10.0, 10.5)];
+        let out = atr(&bars, 2);
+        assert_eq!(out[0], None);
+        assert!((out[1].unwrap() - 2.5).abs() < 1e-12);
+        assert!((out[2].unwrap() - 1.75).abs() < 1e-12);
+    }
+
+    #[test]
+    fn gap_up_uses_previous_close() {
+        // Gap: prev close 10, bar trades 14-13 → TR = |14-10| = 4, not 1.
+        let bars = [bar(10.0, 10.0, 10.0), bar(14.0, 13.0, 13.5)];
+        let out = atr(&bars, 1);
+        assert!((out[1].unwrap() - 4.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn missing_high_low_does_not_end_the_series() {
+        let mut bars = vec![bar(10.0, 8.0, 9.0), bar(12.0, 9.0, 11.0), bar(11.0, 10.0, 10.5)];
+        bars.push(Bar { high: None, low: None, ..bar(0.0, 0.0, 10.5) });
+        bars.push(bar(11.0, 10.0, 10.5));
+        let out = atr(&bars, 2);
+        assert_eq!(out[3], None);
+        assert!(out[4].is_some(), "ATR must resume after a partial bar");
+    }
+}
