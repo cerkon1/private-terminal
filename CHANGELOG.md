@@ -24,6 +24,11 @@ Folds in the unreleased 1.0.3 hardening pass.
   time in market, trade list, equity curves.
 
 ### Fixed
+- **Pulse PRIME skipped tickers whose section had been refreshed.** Since
+  1.0.1 a refresh stores the last few days of bars, and PRIME only fetched
+  tickers with none at all — so those rows stayed blank. PRIME now fetches
+  every ticker Pulse can't rank yet, and a mostly-empty Pulse (fresh
+  install) explains itself with a PRIME prompt.
 - **Tile "1D %" showed a ~5-day change** since 1.0.1. It now compares
   against the previous session's close.
 - **Indicators no longer go blank after a single incomplete price bar.**

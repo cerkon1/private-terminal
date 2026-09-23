@@ -3289,6 +3289,21 @@ html, body, #root {
   margin-left: 1px;
 }
 
+/* Fresh-install prompt when most rows have no history yet. */
+.pulse__unprimed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin: var(--space-sm) 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid rgba(var(--accent-amber-rgb), 0.5);
+  border-radius: var(--radius-md);
+  background: rgba(var(--accent-amber-rgb), 0.06);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
 /* v1.1 — change since the previous trading day (pulseDelta.ts). */
 .pulse__delta {
   margin-left: 4px;

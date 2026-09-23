@@ -260,6 +260,14 @@ export default function PulseDashboard({ onSelectSection }: Props) {
       ),
     [sections],
   );
+  const tickerRowCount = useMemo(
+    () => sections.reduce((acc, s) => acc + s.rows.filter(r => !r.isMacro).length, 0),
+    [sections],
+  );
+  // Fresh install / new machine: history is only fetched when a chart opens
+  // or on PRIME, so most rows start blank. Say so plainly instead of leaving
+  // a small chip as the only hint.
+  const mostlyUnprimed = tickerRowCount > 0 && noBarsCount * 2 > tickerRowCount;
 
   const visibleSections: CrossSectionSection[] = useMemo(() => {
     const filtered = sections.map(section => {
@@ -368,6 +376,23 @@ export default function PulseDashboard({ onSelectSection }: Props) {
           )}
         </div>
       </div>
+      {mostlyUnprimed && !isPriming && (
+        <div className="pulse__unprimed">
+          <span>
+            <strong>{noBarsCount}</strong> of {tickerRowCount} tickers have no price history
+            on this machine yet, so their rows are blank. PRIME fetches 5 years for each
+            from Yahoo — a one-time step that takes a minute or two.
+          </span>
+          <button type="button" className="view-toggle view-toggle--active" onClick={prime}>
+            PRIME {noBarsCount}
+          </button>
+        </div>
+      )}
+      {isPriming && (
+        <div className="pulse__prime-status">
+          Fetching history for {noBarsCount} tickers… Pulse refreshes when it's done.
+        </div>
+      )}
       {primeStatus && <div className="pulse__prime-status">{primeStatus}</div>}
       {primeFailures.length > 0 && (
         <div className="pulse__prime-failures">

@@ -122,8 +122,38 @@ pub struct PrimeResult {
     pub failures: Vec<PrimeFailure>,
 }
 
-/// Fetch + upsert history for every enabled watchlist ticker that currently
-/// has zero bars in `price_history`. Complement to the on-demand fetch path
+/// Yahoo tickers in enabled leaf groups that Pulse would grey out — fewer
+/// usable bars than `NO_BARS_THRESHOLD`. Not "no bars at all": since v1.0.1
+/// REFRESH writes the last ~5 days, and a zero-bars rule left every
+/// refreshed-but-never-charted ticker greyed for good.
+fn prime_targets(db: &crate::db::Db) -> Result<Vec<(String, String)>, String> {
+    let sectors = db.list_sector_groups()?;
+    let mut out: Vec<(String, String)> = Vec::new();
+    for sg in sectors.iter().filter(|s| s.enabled) {
+        let has_children = sectors
+            .iter()
+            .any(|s| s.parent_id.as_deref() == Some(sg.id.as_str()));
+        if has_children {
+            continue;
+        }
+        for t in db.list_tickers_in_sector(&sg.id)? {
+            if t.data_source != "yahoo" {
+                continue;
+            }
+            let key = (t.ticker, t.data_source);
+            if out.contains(&key) {
+                continue; // same ticker listed in two groups
+            }
+            if db.bar_count(&key.0, &key.1)? < crate::cross_section::compute::NO_BARS_THRESHOLD {
+                out.push(key);
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Fetch + upsert 5y history for every enabled watchlist ticker Pulse would
+/// grey out (see `prime_targets`). Complement to the on-demand fetch path
 /// in `get_ticker_history` — this one batch-primes so Pulse sees a full
 /// snapshot without the user opening each feature chart by hand. Invoked
 /// from the Pulse banner's PRIME chip when greyed (no-bars) rows exist.
@@ -134,29 +164,11 @@ pub struct PrimeResult {
 pub async fn prime_scanner_histories(
     state: State<'_, AppState>,
 ) -> Result<PrimeResult, String> {
-    // Step 1: under lock, build the target list of tickers with no bars yet.
-    // Drop the MutexGuard before any await (it's std::sync::Mutex — not Send).
+    // Step 1: under lock, build the target list. Drop the MutexGuard before
+    // any await (it's std::sync::Mutex — not Send).
     let targets: Vec<(String, String)> = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
-        let sectors = db.list_sector_groups()?;
-        let mut out = Vec::new();
-        for sg in sectors.iter().filter(|s| s.enabled) {
-            let has_children = sectors
-                .iter()
-                .any(|s| s.parent_id.as_deref() == Some(sg.id.as_str()));
-            if has_children {
-                continue;
-            }
-            for t in db.list_tickers_in_sector(&sg.id)? {
-                if t.data_source != "yahoo" {
-                    continue;
-                }
-                if db.latest_bar_date(&t.ticker, &t.data_source)?.is_none() {
-                    out.push((t.ticker, t.data_source));
-                }
-            }
-        }
-        out
+        prime_targets(&db)?
     };
 
     if targets.is_empty() {
@@ -215,4 +227,48 @@ pub async fn prime_scanner_histories(
         }
     }
     Ok(PrimeResult { primed, failures })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::prime_targets;
+    use crate::db::Db;
+    use crate::sources::yahoo::Bar;
+
+    fn bars(n: usize) -> Vec<Bar> {
+        (0..n)
+            .map(|i| Bar {
+                date: format!("2026-{:02}-{:02}", 1 + i / 28, 1 + i % 28),
+                open: Some(1.0),
+                high: Some(1.0),
+                low: Some(1.0),
+                close: Some(1.0),
+                volume: None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn prime_targets_include_refresh_only_tickers() {
+        let dir = std::env::temp_dir().join(format!("pt-prime-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let db = Db::open(&dir.join("t.db")).unwrap();
+        db.initialize_schema().unwrap();
+        db.migrate().unwrap();
+        db.seed().unwrap();
+
+        // ^GSPC: 5 bars from a dashboard REFRESH — still greyed in Pulse.
+        db.upsert_price_bars("^GSPC", "yahoo", &bars(5)).unwrap();
+        // ^DJI: enough history — not a target.
+        db.upsert_price_bars("^DJI", "yahoo", &bars(40)).unwrap();
+
+        let targets = prime_targets(&db).unwrap();
+        let has = |t: &str| targets.iter().any(|(x, _)| x == t);
+        assert!(has("^GSPC"), "refresh-only ticker must be primed");
+        assert!(!has("^DJI"), "ticker with history must not be refetched");
+        let unique: std::collections::HashSet<_> = targets.iter().collect();
+        assert_eq!(unique.len(), targets.len(), "no duplicate fetches");
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

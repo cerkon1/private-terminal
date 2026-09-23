@@ -21,7 +21,9 @@ use crate::db::{Db, FredSeriesRow, SectorGroupRow, WatchlistTickerRow};
 use crate::indicators::{find_indicator, Bar, IndicatorRegion};
 
 const ISO_DATE: &str = "%Y-%m-%d";
-const NO_BARS_THRESHOLD: usize = 30;
+/// Fewer usable bars than this and a Pulse row is greyed. PRIME uses the
+/// same threshold to decide what to fetch — keep them in step.
+pub(crate) const NO_BARS_THRESHOLD: usize = 30;
 const PARTIAL_HISTORY_THRESHOLD: usize = 252;
 const VOLUME_AVG_WINDOW: usize = 5;
 const MACRO_PARTIAL_OBS_THRESHOLD: usize = 60;

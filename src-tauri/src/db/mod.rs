@@ -661,6 +661,20 @@ impl Db {
             .map_err(|e| e.to_string())
     }
 
+    /// Bars with a close for (ticker, data_source) — the same rows
+    /// `all_price_bars_ohlcv` returns.
+    pub fn bar_count(&self, ticker: &str, data_source: &str) -> Result<usize, String> {
+        self.conn
+            .query_row(
+                "SELECT COUNT(*) FROM price_history
+                 WHERE ticker = ?1 AND data_source = ?2 AND close IS NOT NULL",
+                params![ticker, data_source],
+                |row| row.get::<_, i64>(0),
+            )
+            .map(|n| n as usize)
+            .map_err(|e| e.to_string())
+    }
+
     /// All bars for (ticker, data_source) as full OHLCV, ascending by date.
     /// Used by the candlestick feature chart and the indicator compute path.
     pub fn all_price_bars_ohlcv(
