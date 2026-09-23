@@ -251,11 +251,25 @@ pub async fn get_ticker_history(
     };
 
     if needs_fetch {
-        let bars = yahoo::fetch_chart(&ticker, HISTORY_RANGE)
-            .await
-            .map_err(|e| e.to_string())?;
-        let db = state.db.lock().map_err(|e| e.to_string())?;
-        db.upsert_price_bars(&ticker, &data_source, &bars)?;
+        // Offline / rate-limited: fall back to whatever history is cached
+        // rather than failing the chart. The error is persisted so the tile's
+        // fetch-error dot still explains why the data is behind. Only a
+        // ticker with no cached bars at all surfaces the error.
+        match yahoo::fetch_chart(&ticker, HISTORY_RANGE).await {
+            Ok(bars) => {
+                let db = state.db.lock().map_err(|e| e.to_string())?;
+                db.upsert_price_bars(&ticker, &data_source, &bars)?;
+            }
+            Err(e) => {
+                let msg = e.to_string();
+                log::warn!("history refetch failed for {ticker}: {msg}");
+                let db = state.db.lock().map_err(|e| e.to_string())?;
+                let _ = db.set_quote_fetch_error(&ticker, &data_source, Some(&msg));
+                if db.latest_bar_date(&ticker, &data_source)?.is_none() {
+                    return Err(msg);
+                }
+            }
+        }
     }
 
     let db = state.db.lock().map_err(|e| e.to_string())?;

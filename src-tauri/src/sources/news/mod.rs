@@ -24,9 +24,16 @@ pub struct NewsItem {
 #[derive(Debug, thiserror::Error)]
 pub enum NewsError {
     #[error("HTTP error: {0}")]
-    Http(#[from] reqwest::Error),
+    Http(reqwest::Error),
     #[error("parse error: {0}")]
     Parse(String),
     #[error("API error: {0}")]
     Api(String),
+}
+
+impl From<reqwest::Error> for NewsError {
+    fn from(e: reqwest::Error) -> Self {
+        // Finnhub's token rides in the query string — strip the URL.
+        NewsError::Http(crate::sources::redact(e))
+    }
 }

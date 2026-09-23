@@ -4,10 +4,10 @@ const API_ROOT: &str = "https://api.stlouisfed.org/fred";
 
 #[derive(Debug, thiserror::Error)]
 pub enum FredError {
-    #[error("FRED_API_KEY not set — create .env or export it before launching")]
+    #[error("FRED API key not set — add it in Settings → API Keys")]
     MissingApiKey,
     #[error("HTTP error: {0}")]
-    Http(#[from] reqwest::Error),
+    Http(reqwest::Error),
     #[error("FRED API error: {0}")]
     Api(String),
 }
@@ -36,11 +36,16 @@ struct ObservationRaw {
     value: String,
 }
 
-fn client() -> reqwest::Client {
-    reqwest::Client::builder()
-        .user_agent("personal-terminal/0.1 (+personal-use)")
-        .build()
-        .expect("reqwest client")
+impl From<reqwest::Error> for FredError {
+    fn from(e: reqwest::Error) -> Self {
+        // The API key rides in the query string — strip the URL (see `redact`).
+        FredError::Http(super::redact(e))
+    }
+}
+
+fn client() -> &'static reqwest::Client {
+    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    CLIENT.get_or_init(|| super::build_client("personal-terminal/0.1 (+personal-use)"))
 }
 
 pub async fn fetch_series_meta(

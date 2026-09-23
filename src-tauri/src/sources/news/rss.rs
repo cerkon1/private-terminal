@@ -15,16 +15,17 @@ use super::{NewsError, NewsItem};
 const USER_AGENT: &str =
     "Mozilla/5.0 (Personal Terminal RSS Reader; personal research dashboard)";
 
-fn client() -> reqwest::Client {
-    reqwest::Client::builder()
-        .user_agent(USER_AGENT)
-        .timeout(std::time::Duration::from_secs(15))
-        .build()
-        .expect("reqwest client")
+/// Hard cap on a feed body. Real feeds are well under 1 MB; the cap stops a
+/// hostile or broken feed from streaming an unbounded body into memory.
+const MAX_FEED_BYTES: usize = 5 * 1024 * 1024;
+
+fn client() -> &'static reqwest::Client {
+    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    CLIENT.get_or_init(|| crate::sources::build_client(USER_AGENT))
 }
 
 pub async fn fetch(url: &str) -> Result<Vec<NewsItem>, NewsError> {
-    let resp = client().get(url).send().await?;
+    let mut resp = client().get(url).send().await?;
     if !resp.status().is_success() {
         return Err(NewsError::Api(format!(
             "HTTP {} for {}",
@@ -32,7 +33,17 @@ pub async fn fetch(url: &str) -> Result<Vec<NewsItem>, NewsError> {
             url
         )));
     }
-    let body = resp.bytes().await?;
+    let too_big = || NewsError::Api(format!("feed larger than {} MB: {}", MAX_FEED_BYTES / (1024 * 1024), url));
+    if resp.content_length().is_some_and(|n| n as usize > MAX_FEED_BYTES) {
+        return Err(too_big());
+    }
+    let mut body: Vec<u8> = Vec::new();
+    while let Some(chunk) = resp.chunk().await? {
+        if body.len() + chunk.len() > MAX_FEED_BYTES {
+            return Err(too_big());
+        }
+        body.extend_from_slice(&chunk);
+    }
     let feed = parser::parse(Cursor::new(&body))
         .map_err(|e| NewsError::Parse(e.to_string()))?;
 

@@ -23,12 +23,9 @@ struct FinnhubArticle {
     datetime: Option<i64>,
 }
 
-fn client() -> reqwest::Client {
-    reqwest::Client::builder()
-        .user_agent("personal-terminal/0.1")
-        .timeout(std::time::Duration::from_secs(15))
-        .build()
-        .expect("reqwest client")
+fn client() -> &'static reqwest::Client {
+    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    CLIENT.get_or_init(|| crate::sources::build_client("personal-terminal/0.1"))
 }
 
 pub async fn fetch_category(
@@ -76,7 +73,7 @@ async fn parse_response(resp: reqwest::Response) -> Result<Vec<NewsItem>, NewsEr
     let articles: Vec<FinnhubArticle> = resp
         .json()
         .await
-        .map_err(|e| NewsError::Parse(e.to_string()))?;
+        .map_err(|e| NewsError::Parse(crate::sources::redact(e).to_string()))?;
     let items = articles
         .into_iter()
         .filter_map(|a| {
