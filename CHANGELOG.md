@@ -4,7 +4,24 @@ All notable changes to Private Terminal. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [1.0.3] — Unreleased
+## [1.1.0] — Unreleased
+
+Folds in the unreleased 1.0.3 hardening pass.
+
+### Added
+- **Pulse: what changed since the previous trading day.** ▲/▼ marks in
+  cells for moves of 10+ percentile points, ↻ on regime chips that flipped,
+  a banner tally, and a CHANGES filter. Each day's latest Pulse view is
+  kept locally for 90 days.
+- **Private ticker notes.** A NOTES panel beside the chart for your thesis
+  or a dated journal; autosaves; tiles with a note show ✎. Stored only in
+  the local database.
+- **Economic calendar.** Upcoming FRED release dates (CPI, jobs, GDP,
+  claims…) on each MACRO tile and in a CALENDAR view. Same FRED host and
+  key as before — no new outbound destination.
+- **Backtest tab (Analysis).** Long-only replay of the SMMA Ribbon's
+  regime flips on one ticker versus buy-and-hold: returns, CAGR, drawdown,
+  time in market, trade list, equity curves.
 
 ### Fixed
 - **Tile "1D %" showed a ~5-day change** since 1.0.1. It now compares
@@ -37,6 +54,8 @@ All notable changes to Private Terminal. Format follows
   older copy.
 - Heavy operations (maintenance, backup, Pulse, Analysis) no longer freeze
   the window.
+- Analysis tab labels are the short ones intended since 1.0 (Recession /
+  FCI / Regime).
 
 ### Security & privacy
 - API keys can no longer appear in error messages (tile hovers, news
@@ -56,6 +75,8 @@ All notable changes to Private Terminal. Format follows
   only (no portable exe). `SHA256SUMS.txt` + build provenance as before.
 - CI runs lint, frontend and Rust tests, clippy and a version check.
 - Release binaries no longer embed source maps (smaller installer).
+- The installer is unsigned by choice; verify releases with the published
+  checksums and build-provenance attestations.
 
 ## [1.0.2] — 2026-06-11
 ### Added
@@ -70,7 +91,7 @@ All notable changes to Private Terminal. Format follows
 ## [1.0.0] — 2026-05-04
 First public release (MIT).
 
-[1.0.3]: https://github.com/cerkon1/private-terminal/compare/v1.0.2...HEAD
+[1.1.0]: https://github.com/cerkon1/private-terminal/compare/v1.0.2...HEAD
 [1.0.2]: https://github.com/cerkon1/private-terminal/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/cerkon1/private-terminal/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/cerkon1/private-terminal/releases/tag/v1.0.0

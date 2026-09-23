@@ -83,6 +83,10 @@ Strictly personal use — no sharing, no licensing, no auth, no multi-user, no c
 - **Chart component is indicator-agnostic.** Reads `IndicatorOutput` + `render_spec`, draws via ECharts. Adding a new indicator doesn't touch chart code.
 - **Fetch-on-view, no background timers.** Fetches happen when a section opens (subject to a cache TTL) or on REFRESH: Yahoo quotes 15 min, FRED 12 h, news per-feed `refresh_minutes`; Yahoo history when a feature chart opens. The Privacy tab's cadence column must match this — update both together.
 - **Every outbound HTTP client** comes from `sources::build_client` (timeouts) and every source error type converts reqwest errors through `sources::redact` (keys ride in query strings). New sources must do the same.
+- **v1.1 local data (all in the one SQLite file):**
+  - `pulse_snapshots` — one Pulse view per trading day (key = `market_calendar::expected_latest_us_close()`), latest compute wins, 90-day retention at boot. Thresholds for what's drawn live in `src/components/pulse/pulseDelta.ts`.
+  - `ticker_notes` — user-written text. **Never deleted silently:** only an explicit purge of a ticker's last visible occurrence removes its note; the orphan sweep must not touch it.
+  - `fred_releases` / `fred_release_dates` + `fred_series.release_id` — economic calendar, 24 h TTL (`config` key `calendar.last_fetched`), daily series excluded. "Today" for release labels is New York's date from the backend, never the local clock.
 - **News dispatcher by `source_type`.** One fetcher module per type (`finnhub`, `rss`, future `newsapi`).
 - **Unified quote cache.** All equity-like sources write to `quote_cache` keyed by (ticker, data_source).
 - **Serde/IPC rules apply** (from PrivateACB):
