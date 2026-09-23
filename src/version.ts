@@ -1,6 +1,6 @@
-// Bumped manually on release. Mirrors `version` in:
-//   - package.json
-//   - src-tauri/Cargo.toml
-//   - src-tauri/tauri.conf.json   (wins over Cargo.toml for bundle metadata)
-// Keep all four in sync.
-export const APP_VERSION = '1.0.1';
+// Injected at build time from package.json by vite.config.ts `define`.
+// Release bumps touch package.json, src-tauri/Cargo.toml and
+// src-tauri/tauri.conf.json — this file no longer needs editing.
+declare const __APP_VERSION__: string;
+
+export const APP_VERSION: string = __APP_VERSION__;
