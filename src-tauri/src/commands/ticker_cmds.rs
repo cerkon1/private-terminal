@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use chrono::{DateTime, Datelike, Duration, NaiveDate, Timelike, Utc, Weekday};
-use chrono_tz::America::New_York;
+use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
 use futures::future::join_all;
 use serde::Serialize;
 use tauri::State;
 use tokio::sync::Semaphore;
 
+use crate::market_calendar;
 use crate::sources::yahoo;
 use crate::AppState;
 
@@ -244,7 +244,7 @@ pub async fn get_ticker_history(
         match db.latest_bar_date(&ticker, &data_source)? {
             None => true,
             Some(latest) => match NaiveDate::parse_from_str(&latest, "%Y-%m-%d") {
-                Ok(d) => d < expected_latest_us_close(),
+                Ok(d) => d < market_calendar::expected_latest_us_close(),
                 Err(_) => true,
             },
         }
@@ -315,32 +315,5 @@ fn parse_rfc3339(s: &str) -> Option<DateTime<Utc>> {
     DateTime::parse_from_rfc3339(s)
         .ok()
         .map(|dt| dt.with_timezone(&Utc))
-}
-
-/// Most recent calendar date that should have a settled US-equity daily
-/// close, in NY local time. Used by the chart-open staleness check.
-///
-/// Rules:
-///   - Weekday in NY at or after 16:00 ET → today.
-///   - Weekday in NY before 16:00 ET → previous trading day (today's bar
-///     hasn't settled yet).
-///   - Saturday / Sunday → most recent Friday.
-///
-/// Does NOT account for US market holidays. On a holiday Monday this
-/// returns the holiday date; saved data won't match and the app will make
-/// one needless Yahoo call that returns no new bars. Cheap, harmless.
-fn expected_latest_us_close() -> NaiveDate {
-    let ny = Utc::now().with_timezone(&New_York);
-    let mut date = ny.date_naive();
-    let post_close = ny.hour() >= 16;
-
-    let is_weekday = !matches!(date.weekday(), Weekday::Sat | Weekday::Sun);
-    if is_weekday && !post_close {
-        date = date.pred_opt().unwrap_or(date);
-    }
-    while matches!(date.weekday(), Weekday::Sat | Weekday::Sun) {
-        date = date.pred_opt().unwrap_or(date);
-    }
-    date
 }
 

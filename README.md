@@ -98,9 +98,10 @@ only — not background.
 Download the latest installer from
 [GitHub Releases](https://github.com/cerkon1/private-terminal/releases).
 
-**Windows 10/11.** No code-signing certificate yet, so SmartScreen will
-warn on first launch — click *More info* → *Run anyway*. The signing cost
-is on the v1.x roadmap.
+**Windows 10/11.** The installer is not code-signed — deliberately: it's
+open-source software, and every release can be verified against this
+repository instead (see below). SmartScreen will warn on first launch —
+click *More info* → *Run anyway*.
 
 Mac and Linux builds are not currently provided. Tauri supports them; the
 codebase is portable; we just haven't packaged for them. PRs welcome.

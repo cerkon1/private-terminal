@@ -468,10 +468,5 @@ INSERT OR IGNORE INTO analysis_tools (id, display_name, scope, display_order, en
   ('financial_conditions',  'FCI',                  'macro',       6, 1, NULL),
   ('regime_quadrant',       'Regime',               'macro',       7, 1, '{"inflationProxy":"cpi","trailMonths":24}');
 
--- S+1: shorter labels so the 7-tab strip fits on one row at common
--- effective widths (1128px CSS px / Win 200% scale on hi-DPI laptops).
--- INSERT OR IGNORE above only seeds fresh DBs; UPDATE rewrites the
--- display_name on existing DBs at every boot. Idempotent.
-UPDATE analysis_tools SET display_name = 'Recession' WHERE id = 'recession_prob';
-UPDATE analysis_tools SET display_name = 'FCI'       WHERE id = 'financial_conditions';
-UPDATE analysis_tools SET display_name = 'Regime'    WHERE id = 'regime_quadrant';
+-- Tab labels shown in the UI come from `analysis/registry.rs` (the Rust
+-- const), not from this table's display_name — edit them there.

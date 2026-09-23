@@ -4,6 +4,7 @@ mod config;
 mod cross_section;
 mod db;
 mod indicators;
+mod market_calendar;
 mod sources;
 
 use std::sync::Mutex;
