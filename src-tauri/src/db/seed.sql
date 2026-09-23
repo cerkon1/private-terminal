@@ -35,6 +35,22 @@ UPDATE news_feeds SET enabled = 1
    AND NOT EXISTS (SELECT 1 FROM config WHERE key = 'migration.finnhub_general_enabled');
 INSERT OR IGNORE INTO config (key, value) VALUES ('migration.finnhub_general_enabled', '1');
 
+-- v1.1: two seeded symbols died on Yahoo ("symbol may be delisted"):
+-- MATIC-USD (Polygon migrated MATIC → POL; Yahoo lists POL28321-USD) and
+-- BITF.TO (Bitfarms rebranded as Keel Infrastructure, KEEL.TO). One-shot
+-- removal of the dead rows and their failed quote cache on existing DBs;
+-- the replacements are seeded below. Notes are user data — untouched.
+DELETE FROM quote_cache
+ WHERE ticker IN ('MATIC-USD', 'BITF.TO')
+   AND NOT EXISTS (SELECT 1 FROM config WHERE key = 'migration.dead_symbols_2026_09');
+DELETE FROM price_history
+ WHERE ticker IN ('MATIC-USD', 'BITF.TO')
+   AND NOT EXISTS (SELECT 1 FROM config WHERE key = 'migration.dead_symbols_2026_09');
+DELETE FROM watchlist_tickers
+ WHERE ticker IN ('MATIC-USD', 'BITF.TO')
+   AND NOT EXISTS (SELECT 1 FROM config WHERE key = 'migration.dead_symbols_2026_09');
+INSERT OR IGNORE INTO config (key, value) VALUES ('migration.dead_symbols_2026_09', '1');
+
 -- ──────────────────────────────────────────────────────────────────────
 -- Sector groups — sidebar tree
 -- ──────────────────────────────────────────────────────────────────────
@@ -260,7 +276,7 @@ INSERT OR IGNORE INTO watchlist_tickers (ticker, sector_group_id, data_source, d
   ('QBR-B.TO', 'ca_telecom', 'yahoo', 'Quebecor', 'CAD', 3, 1),
   -- Crypto Miners (3 — GLXY + WULF moved to US per S20)
   ('HUT.TO',  'ca_crypto_miners', 'yahoo', 'Hut 8 Mining',  'CAD', 0, 1),
-  ('BITF.TO', 'ca_crypto_miners', 'yahoo', 'Bitfarms',      'CAD', 1, 1),
+  ('KEEL.TO', 'ca_crypto_miners', 'yahoo', 'Keel (ex-Bitfarms)', 'CAD', 1, 1),
   ('HIVE.TO', 'ca_crypto_miners', 'yahoo', 'HIVE Digital',  'CAD', 2, 1),
   -- Metal Miners
   ('ABX.TO',    'ca_metal_miners', 'yahoo', 'Barrick Gold',     'CAD', 0, 1),
@@ -312,7 +328,7 @@ INSERT OR IGNORE INTO watchlist_tickers (ticker, sector_group_id, data_source, d
   ('TRX-USD',   'crypto', 'yahoo', 'TRON',      'USD', 7,  1),
   ('LINK-USD',  'crypto', 'yahoo', 'Chainlink', 'USD', 8,  1),
   ('AVAX-USD',  'crypto', 'yahoo', 'Avalanche', 'USD', 9,  1),
-  ('MATIC-USD', 'crypto', 'yahoo', 'Polygon',   'USD', 10, 1),
+  ('POL28321-USD', 'crypto', 'yahoo', 'Polygon (POL)', 'USD', 10, 1),
   ('DOT-USD',   'crypto', 'yahoo', 'Polkadot',  'USD', 11, 1),
   ('ATOM-USD',  'crypto', 'yahoo', 'Cosmos',    'USD', 12, 1),
   ('LTC-USD',   'crypto', 'yahoo', 'Litecoin',  'USD', 13, 1);

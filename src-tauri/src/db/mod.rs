@@ -1318,6 +1318,61 @@ mod seed_tests {
     }
 
     #[test]
+    fn dead_symbols_are_replaced_once() {
+        let (db, dir) = fresh_db("dead");
+        let visible = |group: &str| -> Vec<String> {
+            db.list_tickers_in_sector(group).unwrap().into_iter().map(|r| r.ticker).collect()
+        };
+        assert!(visible("crypto").contains(&"POL28321-USD".to_string()));
+        assert!(!visible("crypto").contains(&"MATIC-USD".to_string()));
+        assert!(visible("ca_crypto_miners").contains(&"KEEL.TO".to_string()));
+
+        // A user who deliberately re-adds the old symbol keeps it: the
+        // removal ran once on first boot and never again.
+        db.connection()
+            .execute(
+                "INSERT INTO watchlist_tickers (ticker, sector_group_id, data_source, display_order, enabled)
+                 VALUES ('MATIC-USD', 'crypto', 'yahoo', 99, 1)",
+                [],
+            )
+            .unwrap();
+        db.seed().unwrap();
+        assert!(visible("crypto").contains(&"MATIC-USD".to_string()));
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn upgrade_removes_dead_rows_but_keeps_notes() {
+        let dir = std::env::temp_dir().join(format!("pt-seed-upgrade-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let db = Db::open(&dir.join("t.db")).unwrap();
+        db.initialize_schema().unwrap();
+        db.migrate().unwrap();
+        // State of a pre-1.1 DB: dead symbol seeded, a failed quote, a note.
+        db.connection()
+            .execute_batch(
+                "INSERT INTO sector_groups (id, display_name, data_source, display_order, enabled)
+                   VALUES ('crypto', 'CRYPTO', 'yahoo', 9, 1);
+                 INSERT INTO watchlist_tickers (ticker, sector_group_id, data_source, display_order, enabled)
+                   VALUES ('MATIC-USD', 'crypto', 'yahoo', 10, 1);
+                 INSERT INTO quote_cache (ticker, data_source, last_fetch_error)
+                   VALUES ('MATIC-USD', 'yahoo', 'HTTP 404');",
+            )
+            .unwrap();
+        db.set_ticker_note("MATIC-USD", "yahoo", "sold in 2024").unwrap();
+        db.seed().unwrap();
+        let crypto: Vec<String> =
+            db.list_tickers_in_sector("crypto").unwrap().into_iter().map(|r| r.ticker).collect();
+        assert!(!crypto.contains(&"MATIC-USD".to_string()));
+        assert!(crypto.contains(&"POL28321-USD".to_string()));
+        assert!(db.get_quote("MATIC-USD", "yahoo").unwrap().is_none());
+        assert!(db.get_ticker_note("MATIC-USD", "yahoo").unwrap().is_some(), "notes are user data");
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn hidden_original_blocks_seed_from_resurrecting_a_moved_ticker() {
         // Mirrors update_ticker's move: copy to target + hide the original.
         let (db, dir) = fresh_db("move");

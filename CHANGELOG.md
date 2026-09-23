@@ -29,6 +29,10 @@ Folds in the unreleased 1.0.3 hardening pass.
   tickers with none at all — so those rows stayed blank. PRIME now fetches
   every ticker Pulse can't rank yet, and a mostly-empty Pulse (fresh
   install) explains itself with a PRIME prompt.
+- Two seeded symbols had died on Yahoo: Polygon is now `POL28321-USD`
+  (MATIC migrated to POL) and Bitfarms is now Keel Infrastructure
+  (`KEEL.TO`). Existing installs swap them automatically, once; notes are
+  kept.
 - **Tile "1D %" showed a ~5-day change** since 1.0.1. It now compares
   against the previous session's close.
 - **Indicators no longer go blank after a single incomplete price bar.**
