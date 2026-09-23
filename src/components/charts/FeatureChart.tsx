@@ -467,7 +467,12 @@ function buildCandlestickOption({
       };
       baseAxis.max = 0;
       if (autoFitY && visibleBars.length > 0) {
-        const visibleDd = computeDrawdown(visibleBars.map((b) => b.close));
+        // Fit to the plotted series (running peak over the FULL history),
+        // restricted to the visible slice. Recomputing drawdown on the slice
+        // alone reset the peak at the zoom edge, so a window deep inside a
+        // drawdown got an axis far shallower than the line — clipped.
+        const [i0, i1] = visibleIndexRange(bars.length, visibleRange);
+        const visibleDd = computeDrawdown(bars.map((b) => b.close)).slice(i0, i1);
         let minDd = 0;
         for (const v of visibleDd) {
           if (v !== null && v < minDd) minDd = v;
@@ -1077,11 +1082,16 @@ function cornerLabelGraphic(text: string, grid: { left: number; top: string }) {
 /** Slice the bar array to whatever's currently visible per the dataZoom
  *  start/end percent. Indices are inclusive on both ends to match ECharts'
  *  filter semantics. */
+/** [start, end) bar indices covered by the dataZoom percent range. */
+function visibleIndexRange(length: number, range: { start: number; end: number }): [number, number] {
+  const i0 = Math.max(0, Math.floor((range.start / 100) * length));
+  const i1 = Math.min(length, Math.ceil((range.end / 100) * length));
+  return i1 <= i0 ? [0, 0] : [i0, i1];
+}
+
 function sliceVisibleBars(bars: CandleBar[], range: { start: number; end: number }): CandleBar[] {
   if (bars.length === 0) return bars;
-  const i0 = Math.max(0, Math.floor((range.start / 100) * bars.length));
-  const i1 = Math.min(bars.length, Math.ceil((range.end / 100) * bars.length));
-  if (i1 <= i0) return [];
+  const [i0, i1] = visibleIndexRange(bars.length, range);
   return bars.slice(i0, i1);
 }
 

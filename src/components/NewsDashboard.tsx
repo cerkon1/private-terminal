@@ -22,6 +22,7 @@ export default function NewsDashboard({ onDataChanged }: Props) {
     try {
       const data = await invoke<NewsItem[]>('list_news', { limit: 300 });
       setItems(data);
+      setLoadError(null);
     } catch (err) {
       setLoadError(String(err));
     }
@@ -105,10 +106,8 @@ export default function NewsDashboard({ onDataChanged }: Props) {
     return items.filter(it => it.category === activeCategory);
   }, [items, activeCategory]);
 
-  if (loadError) {
-    return <div className="macro-tile__error">Failed to load news: {loadError}</div>;
-  }
-  if (!items) {
+  // Load error renders inside the dashboard so REFRESH stays reachable.
+  if (!items && !loadError) {
     return <div className="macro-tile__loading">Loading news…</div>;
   }
 
@@ -141,6 +140,8 @@ export default function NewsDashboard({ onDataChanged }: Props) {
           </button>
         </div>
       </div>
+
+      {loadError && <div className="macro-tile__error">Failed to load news: {loadError}</div>}
 
       {refreshErrors.length > 0 && (
         <div className="news-errors">

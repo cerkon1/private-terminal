@@ -78,6 +78,7 @@ export default function MacroDashboard({ onDataChanged, onSelectSection }: Props
     if (isRefreshing) return;
     setIsRefreshing(true);
     setRefreshSummary(null);
+    setLoadError(null);
     const data = await fetchTiles(true);
     setIsRefreshing(false);
     if (!data) return;
@@ -142,10 +143,10 @@ export default function MacroDashboard({ onDataChanged, onSelectSection }: Props
     };
   }, [selected?.seriesId]);
 
-  if (loadError) {
-    return <div className="macro-tile__error">Failed to load: {loadError}</div>;
-  }
-  if (!tiles) {
+  // A load error renders inside the dashboard, not instead of it: the
+  // controls (REFRESH) must stay reachable so the user can retry after
+  // e.g. adding a FRED key, and a failed refresh keeps the tiles it had.
+  if (!tiles && !loadError) {
     return <div className="macro-tile__loading">Loading macro dashboard…</div>;
   }
 
@@ -212,6 +213,7 @@ export default function MacroDashboard({ onDataChanged, onSelectSection }: Props
           </button>
         </div>
       </div>
+      {loadError && <div className="macro-tile__error">Failed to load: {loadError}</div>}
       <section className="tile-grid">
         {visibleTiles.map(t => (
           <MacroTile

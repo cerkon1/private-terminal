@@ -167,7 +167,11 @@ function SectionView({
     : group.displayName.toUpperCase();
 
   return (
+    // Keyed by sector: switching sectors mounts a fresh instance, so an
+    // in-flight REFRESH for the old sector can't land in the new sector's
+    // grid, and per-sector local state (view mode, selection) resets.
     <TickerDashboard
+      key={group.id}
       sectorGroupId={group.id}
       sectorName={label}
       themeColors={themeColors}

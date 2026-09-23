@@ -182,6 +182,7 @@ export default function TickerDashboard({
     if (isRefreshing) return;
     setIsRefreshing(true);
     setRefreshSummary(null);
+    setLoadError(null);
     const data = await fetchTiles(true);
     setIsRefreshing(false);
     if (!data) return;
@@ -436,10 +437,9 @@ export default function TickerDashboard({
     setAvwapPopoverOpen(false);
   }, [selected?.ticker, selected?.dataSource, showAvwap]);
 
-  if (loadError) {
-    return <div className="macro-tile__error">Failed to load: {loadError}</div>;
-  }
-  if (!tiles) {
+  // Load error renders inside the dashboard so REFRESH stays reachable and a
+  // failed refresh keeps the tiles already on screen.
+  if (!tiles && !loadError) {
     return <div className="macro-tile__loading">Loading {sectorName}…</div>;
   }
 
@@ -562,8 +562,9 @@ export default function TickerDashboard({
           </button>
         </div>
       </div>
+      {loadError && <div className="macro-tile__error">Failed to load: {loadError}</div>}
       <section className="tile-grid">
-        {tiles.map((t) => (
+        {(tiles ?? []).map((t) => (
           <TickerTile
             key={t.ticker}
             tile={t}
