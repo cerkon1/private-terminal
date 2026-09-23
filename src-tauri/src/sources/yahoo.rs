@@ -234,10 +234,8 @@ pub async fn fetch_chart(symbol: &str, range: &str) -> Result<Vec<Bar>, YahooErr
 }
 
 fn bars_from_chart(timestamps: Vec<i64>, quote: ChartQuote) -> Vec<Bar> {
-    let len = timestamps.len();
-    let mut bars = Vec::with_capacity(len);
-    for i in 0..len {
-        let ts = timestamps[i];
+    let mut bars = Vec::with_capacity(timestamps.len());
+    for (i, &ts) in timestamps.iter().enumerate() {
         let date = chrono::DateTime::<chrono::Utc>::from_timestamp(ts, 0)
             .map(|dt| dt.format("%Y-%m-%d").to_string())
             .unwrap_or_default();

@@ -452,6 +452,7 @@ impl Db {
 
     // ──────── Quote cache ────────
 
+    #[allow(clippy::too_many_arguments)] // one arg per quote_cache column
     pub fn upsert_quote(
         &self,
         ticker: &str,

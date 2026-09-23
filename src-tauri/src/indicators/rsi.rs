@@ -86,7 +86,7 @@ impl Indicator for RsiIndicator {
                     let rs = g / l;
                     Some(100.0 - (100.0 / (1.0 + rs)))
                 }
-                (Some(_), Some(l)) if l == 0.0 => Some(100.0),
+                (Some(_), Some(_)) => Some(100.0), // no losses in window (Pine: down == 0 → 100)
                 _ => None,
             };
             data.push(SeriesPoint {

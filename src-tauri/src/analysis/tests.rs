@@ -1,6 +1,9 @@
 //! Math-only unit tests per S15 Q9.A. No DB / IPC fixtures here; that's
 //! covered by the smoke-test checklist when Phase 1 ships end-to-end.
 
+// Index loops read more clearly than zipped iterators in assertions with `i=` messages.
+#![allow(clippy::needless_range_loop)]
+
 use crate::analysis::align::{align_close_prices, log_returns, pearson};
 use crate::analysis::pairs::rolling_zscore;
 use crate::analysis::rrg::{rolling_sma, rolling_sma_skip_nan, weekly_close_resample};
