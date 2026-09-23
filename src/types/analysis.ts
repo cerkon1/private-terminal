@@ -248,3 +248,52 @@ export type RegimeQuadrantResponse = {
   trailMonthsRequested: number;
   observationCount: number;
 };
+
+// ────── SMMA Ribbon backtest (v1.1) ──────
+
+export type BacktestRequest = { ticker: TickerKey };
+
+export type BacktestTrade = {
+  signalDate: string;
+  entryDate: string;
+  entryPrice: number;
+  exitDate: string;
+  exitPrice: number;
+  returnPct: number;
+  barsHeld: number;
+  /** Still open at the last bar — marked to the last close. */
+  open: boolean;
+};
+
+export type BacktestPerf = {
+  totalReturnPct: number;
+  cagrPct: number | null;
+  maxDrawdownPct: number;
+  timeInMarketPct: number;
+};
+
+export type BacktestTradeStats = {
+  trades: number;
+  winRatePct: number | null;
+  avgTradePct: number | null;
+  medianTradePct: number | null;
+  bestTradePct: number | null;
+  worstTradePct: number | null;
+};
+
+export type BacktestSimulation = {
+  trades: BacktestTrade[];
+  tradeStats: BacktestTradeStats;
+  strategy: BacktestPerf;
+  buyHold: BacktestPerf;
+  equity: { date: string; strategy: number; buyHold: number }[];
+};
+
+export type BacktestResponse = {
+  ticker: TickerKey;
+  startDate: string | null;
+  endDate: string | null;
+  barCount: number;
+  simulation: BacktestSimulation | null;
+  excluded: ExcludedTicker[];
+};

@@ -183,6 +183,7 @@ pub fn run() {
             commands::analysis_cmds::compute_recession_prob,
             commands::analysis_cmds::compute_financial_conditions,
             commands::analysis_cmds::compute_regime_quadrant,
+            commands::analysis_cmds::compute_backtest,
             commands::cross_section_cmds::compute_cross_section,
         ])
         .run(tauri::generate_context!())

@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { BacktestTab } from './BacktestTab';
 import { CorrelationsTab } from './CorrelationsTab';
 import { FinancialConditionsTab } from './FinancialConditionsTab';
 import { PairsTab } from './PairsTab';
@@ -19,4 +20,5 @@ export const ANALYSIS_TAB_REGISTRY: Record<string, ComponentType> = {
   recession_prob: RecessionProbTab,
   financial_conditions: FinancialConditionsTab,
   regime_quadrant: RegimeQuadrantTab,
+  backtest: BacktestTab,
 };

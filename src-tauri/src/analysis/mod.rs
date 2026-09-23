@@ -10,6 +10,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod align;
+pub mod backtest;
 pub mod correlations;
 pub mod coverage;
 pub mod financial_conditions;

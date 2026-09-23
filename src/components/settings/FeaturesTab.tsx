@@ -266,6 +266,22 @@ export default function FeaturesTab() {
       </div>
 
       <div className="about-card">
+        <div className="about-card__title">Backtest (SMMA Ribbon)</div>
+        <p className="about-card__body">
+          Long-only replay of one ticker's cached history: buy at the next
+          open after the ribbon's confirmed state turns bullish, sell at the
+          next open after it stops. Compares total return, CAGR, max drawdown
+          and time in market against buy-and-hold over the same span, with a
+          trade list and equity curves.
+        </p>
+        <p className="about-card__body">
+          <strong>Caveat:</strong> no costs, slippage, dividends or taxes;
+          default ribbon settings only; one ticker at a time. It measures how
+          the signal behaved, not how it will.
+        </p>
+      </div>
+
+      <div className="about-card">
         <div className="about-card__title">NBER recession bar overlay</div>
         <p className="about-card__body">
           Faint gray vertical bands marking US recessions per the National

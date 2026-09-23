@@ -2455,6 +2455,50 @@ html, body, #root {
   border-top: 1px solid var(--border-subtle);
 }
 
+/* v1.1 — SMMA Ribbon backtest tab */
+.backtest__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-lg);
+}
+.backtest__table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.backtest__table th,
+.backtest__table td {
+  padding: 4px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.backtest__table th:first-child,
+.backtest__table td:first-child {
+  text-align: left;
+}
+.backtest__table th {
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+.backtest__table td.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.backtest__trade-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.backtest__trades {
+  max-height: 260px;
+  overflow-y: auto;
+}
+.backtest__table--trades {
+  width: 100%;
+}
+
 .analysis-tab__excluded {
   color: var(--accent-amber);
 }

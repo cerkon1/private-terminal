@@ -13,6 +13,7 @@ use rusqlite::params;
 use tauri::State;
 
 use crate::analysis::{
+    backtest::{self, BacktestRequest, BacktestResponse},
     correlations::{self, CorrelationsRequest, CorrelationsResponse},
     coverage::{self, TickerCoverage},
     financial_conditions::{self, FinancialConditionsRequest, FinancialConditionsResponse},
@@ -100,6 +101,15 @@ pub fn list_tickers_with_coverage(
 ) -> Result<Vec<TickerCoverage>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     coverage::list_tickers_with_coverage(&db)
+}
+
+#[tauri::command(async)]
+pub fn compute_backtest(
+    request: BacktestRequest,
+    state: State<'_, AppState>,
+) -> Result<BacktestResponse, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    backtest::compute_backtest(&db, request)
 }
 
 #[tauri::command(async)]

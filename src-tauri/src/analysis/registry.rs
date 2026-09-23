@@ -75,6 +75,13 @@ pub const ANALYSIS_TOOLS: &[AnalysisToolMeta] = &[
         display_order: 7,
         default_config_json: Some(r#"{"inflationProxy":"cpi","trailMonths":24}"#),
     },
+    AnalysisToolMeta {
+        id: "backtest",
+        display_name: "Backtest",
+        scope: "cross_asset",
+        display_order: 8,
+        default_config_json: None,
+    },
 ];
 
 /// IPC shape returned by `list_analysis_tools` — registry meta merged with
