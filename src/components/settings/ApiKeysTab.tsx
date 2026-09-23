@@ -17,10 +17,15 @@ export default function ApiKeysTab() {
   return (
     <div className="settings-section">
       <p className="settings-section__intro">
-        API keys are stored in the app's local database (path shown in the
-        header) — only your user account can read it. A key in a{' '}
-        <code>.env</code> file at startup still works as a fallback for
-        development.
+        <strong>FRED</strong> (free) powers the MACRO tiles, the economic
+        calendar and the macro Analysis tabs. <strong>Finnhub</strong>{' '}
+        (optional, free) adds US ticker news. Everything else works without
+        a key.
+      </p>
+      <p className="settings-section__intro">
+        Keys are stored in the app's local database (path shown in the
+        header), unencrypted — only your user account can read it. A key in
+        a <code>.env</code> file is also read, in development builds only.
       </p>
       {SERVICES.map((s) => (
         <ApiKeyRow key={s.id} service={s.id} label={s.label} helpUrl={s.helpUrl} />
