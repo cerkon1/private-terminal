@@ -34,9 +34,15 @@ trailing 5-year window. One sortable, filterable screen with REGIME / AGE /
 LEVEL / RSI / ATR / VOL / DD columns. Click any ticker to drop into a
 chart.
 
-**Macro dashboard.** 29 economic indicators from FRED with category tabs
-(Rates · Inflation · Labor · Growth · Housing · Liquidity · Risk · Energy)
-and a heatmap view by year-over-year delta.
+**What changed since yesterday.** Pulse remembers each trading day's
+picture: ▲/▼ marks show big percentile moves since the previous trading
+day, ↻ marks regime flips, and a CHANGES filter shows only what moved.
+
+**Macro dashboard + economic calendar.** 29 economic indicators from FRED
+with category tabs (Rates · Inflation · Labor · Growth · Consumer · Housing ·
+Liquidity · Risk · Energy · Recession · Conditions), a heatmap view by
+year-over-year delta, and the upcoming release date for each series — CPI,
+jobs, GDP, jobless claims — on the tiles and in a calendar view.
 
 **Multi-indicator charts.** Candlestick view with SMMA Ribbon (quad-MA
 state), RSI(14), ATR(14), Volume Profile (VRVP), Drawdown subpane, and
@@ -45,10 +51,14 @@ AVWAP anchor; up to five per ticker, persisted per-ticker.
 
 ![Multi-indicator candlestick chart — SMMA Ribbon, RSI, ATR, Volume Profile, Anchored VWAP](docs/screenshots/feature-chart-btc.png)
 
-**Analysis section — seven cross-asset tools.** Correlations, Pairs ratios,
-Relative Rotation Graph (RRG), Yield Curve, Recession Probability,
-Financial Conditions, Macro Regime Quadrant. Each tab includes
+**Analysis section — eight tools.** Correlations, Pairs ratios, Relative
+Rotation Graph (RRG), Yield Curve, Recession Probability, Financial
+Conditions, Macro Regime Quadrant, and a **Backtest** of the SMMA Ribbon's
+regime flips against buy-and-hold on any ticker. Each tab includes
 plain-language interpretation guidance and the underlying math.
+
+**Private ticker notes.** Keep your thesis or a dated journal next to each
+chart. Notes save as you type and never leave your machine.
 
 **Watchlist + sectors.** 176 seed tickers across US/CA equities (ten
 sub-sectors each), indices (Americas / Europe / Asia-Pacific), commodities,
@@ -107,6 +117,16 @@ click *More info* → *Run anyway*.
 Mac and Linux builds are not currently provided. Tauri supports them; the
 codebase is portable; we just haven't packaged for them. PRs welcome.
 
+### First run
+
+1. **Add a free FRED API key** (Settings → API Keys) —
+   [sign up here](https://fred.stlouisfed.org/docs/api/api_key.html). It
+   powers the MACRO tiles, the economic calendar and the macro Analysis
+   tabs. A Finnhub key is optional (US ticker news only).
+2. **Open Pulse and press PRIME.** Price history is downloaded on demand, so
+   on a fresh install most Pulse rows start blank. PRIME fetches five years
+   for every ticker in one go (a minute or two, one time).
+
 ### Verifying a release
 
 Releases are built by the [release workflow](.github/workflows/release.yml)
@@ -134,14 +154,19 @@ git clone https://github.com/cerkon1/private-terminal
 cd private-terminal
 npm install
 npm run tauri:dev   # development with hot reload
-npm run tauri:build # production build (NSIS installer + portable exe on Windows)
+npm run tauri:build # production build (NSIS installer)
 ```
 
-A FRED API key is required to populate the MACRO section (free signup at
-<https://fred.stlouisfed.org/docs/api/api_key.html>). A Finnhub API key is
-optional, used only for US ticker news (free signup at
-<https://finnhub.io/>). Both are stored locally in your SQLite DB; neither
-is required for the app to launch or for the rest of the sections to work.
+Checks (the same set CI runs on every push):
+
+```sh
+npm run lint && npm test && npm run build
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+cargo test --manifest-path src-tauri/Cargo.toml
+```
+
+API keys are optional for launching and are stored locally in your SQLite
+DB (see [First run](#first-run)).
 
 ---
 
@@ -151,7 +176,7 @@ is required for the app to launch or for the rest of the sections to work.
 src-tauri/        Rust backend — data fetchers, SQLite, indicator math, IPC
   src/sources/    Per-source HTTP clients (FRED / Yahoo / Finnhub / RSS)
   src/indicators/ Trait-based registry — SMMA Ribbon / RSI / ATR
-  src/analysis/   Cross-asset analysis tools (Correlations / RRG / etc.)
+  src/analysis/   Analysis tools (Correlations / RRG / Backtest / etc.)
   src/cross_section/ Pulse percentile-rank compute
   src/db/         SQLite schema + seed
 src/              React + TypeScript frontend
@@ -177,7 +202,8 @@ No SaaS dependencies. No cloud services. No external state.
 ## Status
 
 The latest version ships from this repo — see
-[Releases](https://github.com/cerkon1/private-terminal/releases). Active
+[Releases](https://github.com/cerkon1/private-terminal/releases) and the
+[changelog](CHANGELOG.md). Active
 development continues; see the
 [GitHub Issues](https://github.com/cerkon1/private-terminal/issues) for
 roadmap items and bug reports.
