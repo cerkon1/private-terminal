@@ -211,7 +211,7 @@ export default function PulseDashboard({ onSelectSection }: Props) {
     }
   };
 
-  const sections = response?.sections ?? [];
+  const sections = useMemo(() => response?.sections ?? [], [response]);
   const counts = useMemo(() => tallyCounts(sections), [sections]);
   const extremes = useMemo(() => tallyExtremes(sections), [sections]);
   const noBarsCount = useMemo(

@@ -38,6 +38,12 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Frontend tests
+        run: npm test
+
       - name: Typecheck and build frontend
         run: npm run build
 

@@ -279,7 +279,7 @@ export default function TickerDashboard({
         enabled,
         paramsJson: null,
       });
-    } catch (e) {
+    } catch {
       // Roll back on failure.
       setEnabledIds((prev) => {
         const next = new Set(prev);

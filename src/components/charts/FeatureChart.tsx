@@ -1,7 +1,10 @@
+// ECharts option objects are assembled dynamically (per-pane axes, custom
+// series renderItem params); typing them fully costs more than it catches.
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as echarts from 'echarts';
 
-import { IndicatorOutput, IndicatorSeriesPoint } from '../../types/indicator';
+import { IndicatorOutput } from '../../types/indicator';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { getChartTheme } from '../../styles/chartTheme';
 import {
@@ -20,8 +23,6 @@ import {
   sliceVisibleBars,
   subpaneSeriesLowHigh,
   visibleIndexRange,
-  VrvpBin,
-  VrvpData,
 } from './candleMath';
 
 
@@ -200,7 +201,6 @@ export default function FeatureChart({
         autoFitY,
         showVolume,
         visibleRange,
-        defaultStartPct,
         showVrvp,
         showDrawdown,
         showAvwap,
@@ -219,7 +219,6 @@ export default function FeatureChart({
     autoFitY,
     showVolume,
     visibleRange,
-    defaultStartPct,
     showVrvp,
     showDrawdown,
     showAvwap,
@@ -381,7 +380,6 @@ function buildCandlestickOption({
   autoFitY,
   showVolume,
   visibleRange,
-  defaultStartPct,
   showVrvp,
   showDrawdown,
   showAvwap,
@@ -395,7 +393,6 @@ function buildCandlestickOption({
   autoFitY: boolean;
   showVolume: boolean;
   visibleRange: { start: number; end: number };
-  defaultStartPct: number;
   showVrvp: boolean;
   showDrawdown: boolean;
   showAvwap: boolean;

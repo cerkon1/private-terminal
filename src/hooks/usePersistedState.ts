@@ -93,7 +93,6 @@ export function usePersistedState<T>(
   // Unmount: write the pending value now instead of dropping it. (Toggling
   // AUTO Y then clicking Back within 300 ms used to lose the toggle.)
   // flush only touches refs, so the first render's closure is fine here.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => flush, []);
 
   return [value, setValue, status];
