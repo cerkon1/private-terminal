@@ -17,7 +17,7 @@ Blueprint reference images live in `.projects/01_initial_design/images/`:
 
 Reference repos:
 - **PrivateACB** (sibling Tauri repo on the dev machine) — infrastructure reuse source
-- **trendscope** (sibling Python repo on the dev machine) — SMMA Ribbon / RSI / ATR indicator math (`src/trendscope/indicators.py` is the Rust port target; trendscope's code still uses the older "Larsson Line" label — we renamed to SMMA Ribbon in S7 after learning the math is derivative of public community work)
+- **trendscope** — the Python project the SMMA Ribbon / RSI / ATR math was ported from. **No longer on disk (2026-09).** The Rust port in `src-tauri/src/indicators/` plus its known-answer unit tests are now the reference. (trendscope used the older "Larsson Line" label — renamed to SMMA Ribbon in S7 after learning the math is derivative of public community work.)
 
 ---
 
@@ -42,7 +42,7 @@ Strictly personal use — no sharing, no licensing, no auth, no multi-user, no c
 1. **Personal-use only** — no auth, no sharing, no SaaS patterns.
 2. **Extensibility-first (HARD CONSTRAINT)** — sectors, tickers, news feeds, AND technical indicators are all extensible. New sector/ticker/feed = INSERT. New indicator = one Rust module implementing `Indicator` trait + INSERT. Never hardcode sector names, ticker lists, or indicator identifiers in UI or fetcher code.
 3. **Reuse PrivateACB patterns** — SQLite+WAL, CoinGecko client, design tokens, Tauri v2 IPC, decimal precision.
-4. **Port trendscope math verbatim** — SMMA Ribbon (quad-SMMA state) / RSI / ATR / SMMA are already figured out. Don't re-tune without calibration data. Read `trendscope/CLAUDE.md` "Tuning journey" section before touching confirm_bars or SMMA lengths.
+4. **Indicator math is settled — change it only with a test.** SMMA Ribbon (quad-SMMA state) / RSI / ATR / SMMA were ported from trendscope. Deliberate deviations since the port: SMMA carries its state across gap bars and RSI seeds on real deltas (first value at index `length`, matching Wilder / TradingView) — both v1.0.3. Don't re-tune SMMA lengths or confirm_bars without calibration data (trendscope measured confirm 1/3/5 shifts state distribution < 1%).
 5. **Simplicity first** — every tile and every line of code earns its place.
 6. **Free-tier first** — FRED, CoinGecko, Yahoo Finance, Finnhub, RSS.
 7. **Honest collaboration** — don't agree automatically. Flag weaknesses. Explain tradeoffs before proposing.
@@ -60,15 +60,15 @@ Strictly personal use — no sharing, no licensing, no auth, no multi-user, no c
 | Frontend | React + TypeScript + Vite |
 | Charts | **Apache ECharts** (MIT, ~1 MB gzipped — chosen for multi-pane + fill-between-two-lines + custom-series extensibility) |
 | Storage | Local SQLite (Tauri app data dir) |
-| Styling | CSS Modules + design tokens lifted from PrivateACB |
+| Styling | Global stylesheet `src/styles/app.css` + design tokens (`tokens.css`) lifted from PrivateACB. Not CSS Modules. |
 
 ### Data sources
 
 | Source | Use |
 |--------|-----|
 | FRED | US macro series (~18 tiles) |
-| CoinGecko | Crypto top-10 discovery + live (~30/min; 1Y historical — use Yahoo for deeper) |
-| Yahoo Finance | US + TSX equities, futures, DXY/FX, world indices, crypto historical. Unofficial, no key, batch quote endpoint. |
+| CoinGecko | **Planned, not implemented** — crypto currently runs through Yahoo. |
+| Yahoo Finance | US + TSX equities, futures, DXY/FX, world indices, crypto (quotes + history). Unofficial, no key. `/v8/finance/chart` per symbol (the batch `/v7/quote` endpoint needs crumb auth — LESSONS YH-1). |
 | Finnhub | US ticker news + general news (60/min) |
 | RSS | Canadian sources (pluggable) |
 
@@ -81,14 +81,15 @@ Strictly personal use — no sharing, no licensing, no auth, no multi-user, no c
 - **Indicator compute is Rust-side, on-demand, not persisted.** Bars are persisted in `price_history`; indicators are recomputed when a feature chart opens. Recompute is fast (~ms for 1250 daily bars).
 - **Indicators use f64, not rust_decimal.** Display-only, not tax-grade.
 - **Chart component is indicator-agnostic.** Reads `IndicatorOutput` + `render_spec`, draws via ECharts. Adding a new indicator doesn't touch chart code.
-- **Per-source fetch cadence.** FRED daily; Yahoo quotes 5 min (market hours) / 1 hour (off-hours); CoinGecko 5 min; Finnhub 15 min; RSS 30 min. Yahoo historical on-demand when feature chart opens.
+- **Fetch-on-view, no background timers.** Fetches happen when a section opens (subject to a cache TTL) or on REFRESH: Yahoo quotes 15 min, FRED 12 h, news per-feed `refresh_minutes`; Yahoo history when a feature chart opens. The Privacy tab's cadence column must match this — update both together.
+- **Every outbound HTTP client** comes from `sources::build_client` (timeouts) and every source error type converts reqwest errors through `sources::redact` (keys ride in query strings). New sources must do the same.
 - **News dispatcher by `source_type`.** One fetcher module per type (`finnhub`, `rss`, future `newsapi`).
 - **Unified quote cache.** All equity-like sources write to `quote_cache` keyed by (ticker, data_source).
 - **Serde/IPC rules apply** (from PrivateACB):
   - `#[serde(rename_all = "camelCase")]` on every struct crossing IPC (including nested)
   - `#[serde(default)]` on `Option<T>` fields
   - Frontend parameter key must match Rust parameter name
-- **API keys** via Tauri keyring or local encrypted config. Never committed.
+- **API keys** live in the SQLite `config` table (`api_key.*`), **plaintext** — the `keyring` crate silently no-ops on Windows (LESSONS SEC-1). Masked in IPC responses; the generic session-key IPC is restricted to `session.*`. Never committed.
 
 ---
 
@@ -105,7 +106,7 @@ Strictly personal use — no sharing, no licensing, no auth, no multi-user, no c
 | Tauri IPC helpers | `src/utils/tauri-api/` | Simplified |
 | Serde/IPC rules | `.claude/rules/serde-ipc.md` | Obey verbatim |
 
-## trendscope Reuse Checklist (indicator math)
+## trendscope Port (done — historical record)
 
 | Function | trendscope path | Rust destination |
 |----------|-----------------|------------------|
@@ -147,7 +148,26 @@ All non-code artifacts live under `.projects/`. Convention:
 
 Code stays at root: `src/`, `src-tauri/`, `package.json`, etc. Anchor docs that need to be discoverable from the repo root stay at root: `CLAUDE.md`, `README.md`.
 
-**`infrastructure/`** is a sibling folder for **credential scratchpads, API keys, webhook secrets, and local-only operational notes**. It is gitignored in full — never commit anything from this folder. The `.env` file at repo root is the source of truth for runtime API keys; `infrastructure/` holds raw vendor copy-paste material, backup secrets, and other items that should not enter git history.
+**`infrastructure/`** is a sibling folder for **credential scratchpads, API keys, webhook secrets, and local-only operational notes**. It is gitignored in full — never commit anything from this folder. Runtime API keys are stored in the SQLite `config` table via Settings → API Keys; a repo-root `.env` (`FRED_API_KEY`, `FINNHUB_API_KEY`) is a **debug-build-only** fallback. `infrastructure/` holds raw vendor copy-paste material, backup secrets, and other items that should not enter git history.
+
+---
+
+## Checks
+
+Run before committing; CI runs the same set.
+
+| Check | Command |
+|---|---|
+| Lint | `npm run lint` |
+| Frontend tests | `npm test` (Vitest — pure chart math in `src/components/charts/candleMath.ts`) |
+| Typecheck + build | `npm run build` |
+| Rust lint | `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings` |
+| Rust tests | `cargo test --manifest-path src-tauri/Cargo.toml` |
+| Version consistency | `pwsh scripts/check-version.ps1` |
+
+(Standalone cargo commands need `dist/` to exist — run `npm run build` first, or add `--no-default-features`; see LESSONS TV-3.)
+
+**Releases:** bump the version in `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` (the UI reads it from package.json at build time). Pushing a `vX.Y.Z` tag runs `.github/workflows/release.yml`, which builds the NSIS installer, attests it and opens a **draft** release. Installer only — the portable exe is not distributed.
 
 ---
 
@@ -168,4 +188,5 @@ Conventional commits: `feat:`, `fix:`, `docs:`, `chore:`.
 | Blueprint images | `.projects/01_initial_design/images/` |
 | v1.1 Analysis design | `.projects/02_v1_1_analysis/v11_analysis_design.md` |
 | PrivateACB (infra reuse) | sibling Tauri repo on the dev machine |
-| trendscope (indicator math) | sibling Python repo on the dev machine |
+| trendscope (indicator math) | no longer on disk — the Rust port + tests are the reference |
+| Hardening review (2026-09) | `.projects/05_hardening_review/REVIEW.md` |

@@ -1,0 +1,9 @@
+# Normalise text to LF in the repo and the working tree (the repo already
+# stores LF; this stops per-machine autocrlf from rewriting working copies).
+* text=auto eol=lf
+
+*.png  binary
+*.ico  binary
+*.icns binary
+*.bmp  binary
+*.jpg  binary
