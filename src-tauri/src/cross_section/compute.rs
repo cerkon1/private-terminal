@@ -1,10 +1,12 @@
 //! Cross-section compute. Iterates every leaf sector_group + every ticker +
 //! every FRED series; computes percentiles + regime + drawdown per row.
 //!
-//! Percentile baseline: trailing-5y window from the most recent observation
-//! per series. For daily OHLCV that's ~1260 trading bars; for sparser FRED
-//! frequencies (monthly, weekly) `saturating_sub(lookback)` collapses to 0
-//! and the full available history is used — acceptable for v1.
+//! Percentile baseline: trailing `lookback_years` calendar window ending at
+//! each series' most recent observation. Date-based, so the window means the
+//! same thing for every frequency — daily equities (~1260 bars), 7-day crypto
+//! (~1825 bars), weekly and monthly FRED series. (Until v1.0.3 it was a fixed
+//! 1260-observation count: ~3.5y for crypto, ~24y for weekly FRED, the whole
+//! history for monthly.)
 
 use std::collections::{HashMap, HashSet};
 
@@ -19,7 +21,6 @@ use crate::db::{Db, FredSeriesRow, SectorGroupRow, WatchlistTickerRow};
 use crate::indicators::{find_indicator, Bar, IndicatorRegion};
 
 const ISO_DATE: &str = "%Y-%m-%d";
-const TRADING_DAYS_PER_YEAR: u32 = 252;
 const NO_BARS_THRESHOLD: usize = 30;
 const PARTIAL_HISTORY_THRESHOLD: usize = 252;
 const VOLUME_AVG_WINDOW: usize = 5;
@@ -29,7 +30,7 @@ pub fn compute_cross_section(
     db: &Db,
     request: CrossSectionRequest,
 ) -> Result<CrossSectionResponse, String> {
-    let lookback_obs = (request.lookback_years.max(1) * TRADING_DAYS_PER_YEAR) as usize;
+    let lookback_years = request.lookback_years.max(1);
 
     let groups = db.list_sector_groups()?;
     let groups_by_id: HashMap<String, &SectorGroupRow> =
@@ -66,7 +67,7 @@ pub fn compute_cross_section(
         let tickers = db.list_tickers_in_sector(&group.id)?;
         let mut rows = Vec::new();
         for t in tickers.iter().filter(|t| t.enabled) {
-            rows.push(compute_ticker_row(db, t, lookback_obs)?);
+            rows.push(compute_ticker_row(db, t, lookback_years)?);
         }
         if rows.is_empty() {
             continue;
@@ -85,7 +86,7 @@ pub fn compute_cross_section(
     if !series.is_empty() {
         let mut rows = Vec::new();
         for s in &series {
-            rows.push(compute_macro_row(db, s, lookback_obs)?);
+            rows.push(compute_macro_row(db, s, lookback_years)?);
         }
         sections.push(CrossSectionSection {
             id: "macro".to_string(),
@@ -110,7 +111,7 @@ fn make_section_label(g: &SectorGroupRow, by_id: &HashMap<String, &SectorGroupRo
 fn compute_ticker_row(
     db: &Db,
     t: &WatchlistTickerRow,
-    lookback_obs: usize,
+    lookback_years: u32,
 ) -> Result<CrossSectionRow, String> {
     let bars = db.all_price_bars_ohlcv(&t.ticker, &t.data_source)?;
 
@@ -137,7 +138,7 @@ fn compute_ticker_row(
     }
 
     let partial = bars.len() < PARTIAL_HISTORY_THRESHOLD;
-    let window_start = bars.len().saturating_sub(lookback_obs);
+    let window_start = window_start_by_date(bars.iter().map(|b| b.date.as_str()), lookback_years);
     let window = &bars[window_start..];
 
     // LEVEL — current close percentile within trailing-5y closes.
@@ -171,12 +172,12 @@ fn compute_ticker_row(
     };
 
     // RSI / ATR percentiles — universal default params.
-    let rsi = compute_indicator_percentile(&bars, "rsi_14", &json!({"length": 14}), lookback_obs)?;
-    let atr = compute_indicator_percentile(&bars, "atr_14", &json!({"length": 14}), lookback_obs)?;
+    let rsi = compute_indicator_percentile(&bars, "rsi_14", &json!({"length": 14}), window_start)?;
+    let atr = compute_indicator_percentile(&bars, "atr_14", &json!({"length": 14}), window_start)?;
 
     // VOL — 5d-avg volume percentile vs trailing 5y of 5d-avg volumes.
     let vol_series = rolling_avg_volume(&bars, VOLUME_AVG_WINDOW);
-    let vol = compute_series_percentile(&vol_series, lookback_obs);
+    let vol = compute_series_percentile(&vol_series, window_start);
 
     Ok(CrossSectionRow {
         ticker: t.ticker.clone(),
@@ -201,7 +202,7 @@ fn compute_ticker_row(
 fn compute_macro_row(
     db: &Db,
     s: &FredSeriesRow,
-    lookback_obs: usize,
+    lookback_years: u32,
 ) -> Result<CrossSectionRow, String> {
     let obs = db.all_fred_observations(&s.series_id)?;
 
@@ -223,7 +224,7 @@ fn compute_macro_row(
     // for "this baseline isn't really 5y of data."
     let partial = obs.len() < MACRO_PARTIAL_OBS_THRESHOLD;
 
-    let window_start = obs.len().saturating_sub(lookback_obs);
+    let window_start = window_start_by_date(obs.iter().map(|(d, _)| d.as_str()), lookback_years);
     let window_values: Vec<f64> = obs[window_start..].iter().map(|(_, v)| *v).collect();
     let current = obs.last().map(|(_, v)| *v);
     let level = current.map(|c| percentile_rank(c, &window_values));
@@ -288,7 +289,7 @@ fn compute_indicator_percentile(
     bars: &[Bar],
     indicator_id: &str,
     params: &serde_json::Value,
-    lookback_obs: usize,
+    window_start: usize,
 ) -> Result<Option<f64>, String> {
     let ind = match find_indicator(indicator_id) {
         Some(i) => i,
@@ -302,17 +303,43 @@ fn compute_indicator_percentile(
         return Ok(None);
     }
     let values: Vec<Option<f64>> = output.series[0].data.iter().map(|p| p.value).collect();
-    Ok(compute_series_percentile(&values, lookback_obs))
+    Ok(compute_series_percentile(&values, window_start))
 }
 
-fn compute_series_percentile(series: &[Option<f64>], lookback_obs: usize) -> Option<f64> {
+/// `series` is aligned to the bars; `window_start` comes from
+/// `window_start_by_date` over those same bars.
+fn compute_series_percentile(series: &[Option<f64>], window_start: usize) -> Option<f64> {
     let current = series.last().copied().flatten()?;
-    let start = series.len().saturating_sub(lookback_obs);
-    let window: Vec<f64> = series[start..].iter().filter_map(|v| *v).collect();
+    let window: Vec<f64> = series[window_start.min(series.len())..]
+        .iter()
+        .filter_map(|v| *v)
+        .collect();
     if window.is_empty() {
         return None;
     }
     Some(percentile_rank(current, &window))
+}
+
+/// Index of the first observation inside the trailing `years` calendar window
+/// that ends at the last observation. `dates` are ISO `YYYY-MM-DD` in
+/// ascending order. Unparseable last date → 0 (whole history).
+pub(crate) fn window_start_by_date<'a>(
+    dates: impl Iterator<Item = &'a str> + Clone,
+    years: u32,
+) -> usize {
+    let cutoff = dates
+        .clone()
+        .last()
+        .and_then(|d| NaiveDate::parse_from_str(d, ISO_DATE).ok())
+        .and_then(|d| d.checked_sub_months(chrono::Months::new(12 * years)));
+    match cutoff {
+        Some(cutoff) => {
+            let cutoff = cutoff.format(ISO_DATE).to_string();
+            // ISO dates order lexically, so a string compare is a date compare.
+            dates.take_while(|d| *d < cutoff.as_str()).count()
+        }
+        None => 0,
+    }
 }
 
 /// Trailing N-bar average volume per bar. None during warmup or when any

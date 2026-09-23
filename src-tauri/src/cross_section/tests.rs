@@ -1,4 +1,4 @@
-use super::compute::rolling_avg_volume;
+use super::compute::{rolling_avg_volume, window_start_by_date};
 use super::percentile::percentile_rank;
 use crate::indicators::Bar;
 
@@ -86,4 +86,31 @@ fn rolling_avg_volume_missing_breaks_window() {
     ];
     let r = rolling_avg_volume(&bars, 3);
     assert_eq!(r[2], None);
+}
+
+#[test]
+fn window_by_date_is_frequency_independent() {
+    // Monthly series 2000-01 .. 2026-08: a 5y window starts at 2021-08.
+    let monthly: Vec<String> = (2000..=2026)
+        .flat_map(|y| (1..=12).map(move |m| format!("{y}-{m:02}-01")))
+        .filter(|d| d.as_str() <= "2026-08-01")
+        .collect();
+    let start = window_start_by_date(monthly.iter().map(|s| s.as_str()), 5);
+    assert_eq!(monthly[start], "2021-08-01");
+    assert_eq!(monthly.len() - start, 61);
+
+    // Daily 7-day series (crypto): 5y ≈ 1827 bars, not 1260.
+    let first = chrono::NaiveDate::from_ymd_opt(2019, 1, 1).unwrap();
+    let daily: Vec<String> = (0..2800)
+        .map(|i| (first + chrono::Duration::days(i)).format("%Y-%m-%d").to_string())
+        .collect();
+    let start = window_start_by_date(daily.iter().map(|s| s.as_str()), 5);
+    assert!((1826..=1828).contains(&(daily.len() - start)), "got {}", daily.len() - start);
+}
+
+#[test]
+fn window_by_date_short_history_uses_everything() {
+    let dates = ["2026-01-02", "2026-01-05", "2026-01-06"];
+    assert_eq!(window_start_by_date(dates.iter().copied(), 5), 0);
+    assert_eq!(window_start_by_date(std::iter::empty(), 5), 0);
 }

@@ -64,29 +64,31 @@ pub struct RegimePoint {
     pub inflation_yoy: f64,
 }
 
-/// Compute year-over-year % change on a chronologically-sorted monthly level
-/// series. For each point i, looks back exactly `months` rows and emits
-/// `(level[i] / level[i-months] - 1) * 100`. Output length matches input;
-/// the first `months` entries' values are NaN (insufficient history).
+/// Compute year-over-year % change on a monthly level series. For each
+/// point, looks up the observation dated exactly `months` calendar months
+/// earlier and emits `(level / level_then - 1) * 100`. Output length matches
+/// input; points with no observation at the reference date are NaN.
 ///
-/// Operates on row offsets, not calendar dates — assumes the input is a
-/// regular monthly series (FRED INDPRO / CPIAUCSL / PCEPILFE all are).
-/// Skips emitting when the prior reference is non-positive (would invert
-/// the sign of the %-change).
+/// Date-based, not row-based: FRED series have real holes (BLS published no
+/// October 2025 CPI), and a row offset silently turns every later point into
+/// a 13-month change. FRED monthly observations are dated the 1st, so the
+/// exact-date lookup is well-defined. Skips emitting when the prior reference
+/// is non-positive (would invert the sign of the %-change).
 pub fn yoy_pct_change(points: &[MacroPoint], months: usize) -> Vec<MacroPoint> {
+    let by_date: std::collections::HashMap<chrono::NaiveDate, f64> =
+        points.iter().map(|p| (p.date, p.value)).collect();
     points
         .iter()
-        .enumerate()
-        .map(|(i, p)| {
-            let value = if i < months {
-                f64::NAN
-            } else {
-                let prev = points[i - months].value;
-                if prev > 0.0 && prev.is_finite() && p.value.is_finite() {
+        .map(|p| {
+            let prev = p
+                .date
+                .checked_sub_months(chrono::Months::new(months as u32))
+                .and_then(|d| by_date.get(&d).copied());
+            let value = match prev {
+                Some(prev) if prev > 0.0 && prev.is_finite() && p.value.is_finite() => {
                     (p.value / prev - 1.0) * 100.0
-                } else {
-                    f64::NAN
                 }
+                _ => f64::NAN,
             };
             MacroPoint {
                 date: p.date,

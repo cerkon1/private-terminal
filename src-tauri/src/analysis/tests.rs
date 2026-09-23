@@ -259,3 +259,25 @@ fn yoy_skips_nonpositive_prior() {
     assert!(yoy[1].value.is_nan(), "prior was 0.0 — expected NaN");
     assert!((yoy[2].value - 10.0).abs() < 1e-9);
 }
+
+#[test]
+fn yoy_is_date_based_across_a_missing_month() {
+    // 2024-01..2025-12 at 100 then 110, but 2025-10 is missing (as with
+    // CPIAUCSL after the 2025 shutdown). Nov-2025 must compare to Nov-2024,
+    // not to Oct-2024 via a row offset.
+    let mut levels = Vec::new();
+    for m in 1..=12 {
+        levels.push(mp(2024, m, 100.0 + m as f64));
+    }
+    for m in 1..=12 {
+        if m != 10 {
+            levels.push(mp(2025, m, 110.0 + m as f64));
+        }
+    }
+    let yoy = yoy_pct_change(&levels, 12);
+    let nov = yoy.iter().find(|p| p.date == NaiveDate::from_ymd_opt(2025, 11, 1).unwrap()).unwrap();
+    assert!((nov.value - (121.0 / 111.0 - 1.0) * 100.0).abs() < 1e-9, "got {}", nov.value);
+    // A point whose reference month is missing is NaN, not a 13-month change.
+    let gapped = vec![mp(2024, 1, 100.0), mp(2025, 2, 110.0)];
+    assert!(yoy_pct_change(&gapped, 12)[1].value.is_nan());
+}
