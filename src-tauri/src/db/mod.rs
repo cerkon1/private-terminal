@@ -250,6 +250,20 @@ pub struct QuoteCacheRow {
     pub last_fetch_error: Option<String>,
 }
 
+/// One row of a stored Pulse snapshot. `regime` is 'BULL' / 'BEAR' /
+/// 'NEUTRAL' (RegimeState::as_str) or None.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PulseSnapshotRow {
+    pub ticker: String,
+    pub data_source: String,
+    pub level: Option<f64>,
+    pub rsi: Option<f64>,
+    pub atr: Option<f64>,
+    pub vol: Option<f64>,
+    pub dd_pct: Option<f64>,
+    pub regime: Option<String>,
+}
+
 pub struct FredSeriesRow {
     pub series_id: String,
     pub title: Option<String>,
@@ -878,6 +892,97 @@ impl Db {
             )
             .map_err(|e| e.to_string())?;
         Ok(n)
+    }
+
+    // ──────── Pulse snapshots (v1.1) ────────
+
+    /// Write one trading day's Pulse snapshot. Latest compute on a given
+    /// `snap_date` wins (upsert). A ticker listed in several groups appears
+    /// once — callers may pass duplicates; the PK collapses them.
+    pub fn upsert_pulse_snapshot(
+        &self,
+        snap_date: &str,
+        rows: &[PulseSnapshotRow],
+    ) -> Result<(), String> {
+        let tx = self.conn.unchecked_transaction().map_err(|e| e.to_string())?;
+        {
+            let mut stmt = tx
+                .prepare(
+                    "INSERT INTO pulse_snapshots
+                       (snap_date, ticker, data_source, level, rsi, atr, vol, dd_pct, regime)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                     ON CONFLICT(snap_date, ticker, data_source) DO UPDATE SET
+                       level = excluded.level, rsi = excluded.rsi, atr = excluded.atr,
+                       vol = excluded.vol, dd_pct = excluded.dd_pct, regime = excluded.regime",
+                )
+                .map_err(|e| e.to_string())?;
+            for r in rows {
+                stmt.execute(params![
+                    snap_date,
+                    r.ticker,
+                    r.data_source,
+                    r.level,
+                    r.rsi,
+                    r.atr,
+                    r.vol,
+                    r.dd_pct,
+                    r.regime,
+                ])
+                .map_err(|e| e.to_string())?;
+            }
+        }
+        tx.commit().map_err(|e| e.to_string())
+    }
+
+    /// The most recent snapshot strictly before `snap_date`, as
+    /// `(its date, rows)`. None when there is no earlier snapshot.
+    pub fn pulse_snapshot_before(
+        &self,
+        snap_date: &str,
+    ) -> Result<Option<(String, Vec<PulseSnapshotRow>)>, String> {
+        let prev_date: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT MAX(snap_date) FROM pulse_snapshots WHERE snap_date < ?1",
+                params![snap_date],
+                |r| r.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        let Some(prev_date) = prev_date else {
+            return Ok(None);
+        };
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT ticker, data_source, level, rsi, atr, vol, dd_pct, regime
+                 FROM pulse_snapshots WHERE snap_date = ?1",
+            )
+            .map_err(|e| e.to_string())?;
+        let mut rows = stmt.query(params![prev_date]).map_err(|e| e.to_string())?;
+        let mut out = Vec::new();
+        while let Some(row) = rows.next().map_err(|e| e.to_string())? {
+            out.push(PulseSnapshotRow {
+                ticker: row.get(0).map_err(|e| e.to_string())?,
+                data_source: row.get(1).map_err(|e| e.to_string())?,
+                level: row.get(2).map_err(|e| e.to_string())?,
+                rsi: row.get(3).map_err(|e| e.to_string())?,
+                atr: row.get(4).map_err(|e| e.to_string())?,
+                vol: row.get(5).map_err(|e| e.to_string())?,
+                dd_pct: row.get(6).map_err(|e| e.to_string())?,
+                regime: row.get(7).map_err(|e| e.to_string())?,
+            });
+        }
+        Ok(Some((prev_date, out)))
+    }
+
+    /// Drop snapshots older than `older_than_days` (by trading day). Boot-time.
+    pub fn cleanup_old_pulse_snapshots(&self, older_than_days: i64) -> Result<usize, String> {
+        let cutoff = (chrono::Utc::now() - chrono::Duration::days(older_than_days))
+            .format("%Y-%m-%d")
+            .to_string();
+        self.conn
+            .execute("DELETE FROM pulse_snapshots WHERE snap_date < ?1", params![cutoff])
+            .map_err(|e| e.to_string())
     }
 
     // ──────── Key-value config (session persistence) ────────

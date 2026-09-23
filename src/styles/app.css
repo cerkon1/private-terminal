@@ -3083,6 +3083,23 @@ html, body, #root {
   margin-left: 1px;
 }
 
+/* v1.1 — change since the previous trading day (pulseDelta.ts). */
+.pulse__delta {
+  margin-left: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0;
+  opacity: 0.9;
+}
+.pulse__delta--up { color: var(--status-up); }
+.pulse__delta--down { color: var(--status-down); }
+
+.pulse__flip-mark {
+  margin-left: 4px;
+  font-weight: 700;
+  color: var(--accent-amber);
+}
+
 .pulse__em {
   color: var(--text-tertiary);
 }

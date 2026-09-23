@@ -172,3 +172,20 @@ CREATE TABLE IF NOT EXISTS analysis_tools (
   enabled         INTEGER NOT NULL DEFAULT 1,
   config_json     TEXT                          -- per-tool defaults (lookback days, benchmark ticker, quick-pick pairs, etc.)
 );
+
+-- v1.1 Pulse "since the previous trading day". One row per (trading day,
+-- series); the latest compute on a given day overwrites that day's rows.
+-- snap_date = market_calendar::expected_latest_us_close() at compute time.
+-- Pruned to 90 days at boot.
+CREATE TABLE IF NOT EXISTS pulse_snapshots (
+  snap_date    TEXT NOT NULL,
+  ticker       TEXT NOT NULL,
+  data_source  TEXT NOT NULL,
+  level        REAL,
+  rsi          REAL,
+  atr          REAL,
+  vol          REAL,
+  dd_pct       REAL,
+  regime       TEXT,                           -- 'BULL' | 'BEAR' | 'NEUTRAL' | NULL
+  PRIMARY KEY (snap_date, ticker, data_source)
+);

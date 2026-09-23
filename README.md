@@ -74,7 +74,8 @@ the app at Settings → Privacy. Summary:
 - **No auto-update phone-home.** New versions are GitHub Releases you
   download by choice.
 - **No cloud sync.** Your watchlist, indicator settings, AVWAP anchors,
-  view preferences — all live in a single SQLite file on this machine.
+  Pulse's daily snapshots, view preferences — all live in a single SQLite
+  file on this machine.
 - **No data selling.** We don't have any data to sell.
 
 **Outbound network calls.** The only HTTP requests Private Terminal makes

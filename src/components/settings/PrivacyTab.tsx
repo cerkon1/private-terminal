@@ -44,8 +44,8 @@ export default function PrivacyTab() {
           </li>
           <li>
             <strong>No cloud sync.</strong> Your watchlist, indicator
-            settings, AVWAP anchors, view preferences — all live in a single
-            SQLite file on this machine.
+            settings, AVWAP anchors, Pulse's daily snapshots, view
+            preferences — all live in a single SQLite file on this machine.
           </li>
         </ul>
       </div>

@@ -27,6 +27,18 @@ export interface CrossSectionRow {
    *  surfaced inline next to greyed (noBars) rows. Macro rows always null
    *  (FRED has its own fetch_error path on `fred_series`). S22. */
   lastFetchError: string | null;
+  /** Same row in the previous trading day's snapshot (v1.1). Null on the
+   *  first day of use or for rows new since then. */
+  prev: PulsePrev | null;
+}
+
+export interface PulsePrev {
+  level?: number | null;
+  rsi?: number | null;
+  atr?: number | null;
+  vol?: number | null;
+  ddPct?: number | null;
+  regime?: RegimeState | null;
 }
 
 export interface CrossSectionSection {
@@ -39,6 +51,10 @@ export interface CrossSectionResponse {
   sections: CrossSectionSection[];
   /** RFC 3339 UTC timestamp at the moment compute finished. */
   computedAt: string;
+  /** Trading day (YYYY-MM-DD) this compute was filed under. */
+  snapshotDate: string | null;
+  /** Trading day the `prev` values come from; null on the first day. */
+  comparedTo: string | null;
 }
 
 export interface CrossSectionRequest {

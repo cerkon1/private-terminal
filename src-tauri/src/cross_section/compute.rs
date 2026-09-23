@@ -98,6 +98,8 @@ pub fn compute_cross_section(
     Ok(CrossSectionResponse {
         sections,
         computed_at: Utc::now().to_rfc3339(),
+        snapshot_date: None,
+        compared_to: None,
     })
 }
 
@@ -196,6 +198,7 @@ fn compute_ticker_row(
         dd_pct,
         // Bars exist → fetch is healthy enough; no error annotation needed.
         last_fetch_error: None,
+        prev: None,
     })
 }
 
@@ -247,6 +250,7 @@ fn compute_macro_row(
         // FRED has its own fetch_error path on `fred_series` (surfaced
         // by MacroTile already) — no need to plumb it through Pulse.
         last_fetch_error: None,
+        prev: None,
     })
 }
 

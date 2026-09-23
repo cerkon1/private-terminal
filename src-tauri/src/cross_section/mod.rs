@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod compute;
 pub mod percentile;
+pub mod snapshot;
 
 #[cfg(test)]
 mod tests;
@@ -75,6 +76,48 @@ pub struct CrossSectionRow {
     /// sessions without re-PRIMEing. Macro rows always None (FRED has
     /// its own fetch_error path on `fred_series` already). S22.
     pub last_fetch_error: Option<String>,
+    /// The same row's values in the previous trading day's snapshot (v1.1).
+    /// None when there is no earlier snapshot or the row is new since then.
+    #[serde(default)]
+    pub prev: Option<PulsePrev>,
+}
+
+/// Snapshot values a row is compared against. Deltas are computed in the
+/// frontend (`pulse/pulseDelta.ts`) so display thresholds live in one place.
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PulsePrev {
+    #[serde(default)]
+    pub level: Option<f64>,
+    #[serde(default)]
+    pub rsi: Option<f64>,
+    #[serde(default)]
+    pub atr: Option<f64>,
+    #[serde(default)]
+    pub vol: Option<f64>,
+    #[serde(default)]
+    pub dd_pct: Option<f64>,
+    #[serde(default)]
+    pub regime: Option<RegimeState>,
+}
+
+impl RegimeState {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RegimeState::Bull => "BULL",
+            RegimeState::Bear => "BEAR",
+            RegimeState::Neutral => "NEUTRAL",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "BULL" => Some(RegimeState::Bull),
+            "BEAR" => Some(RegimeState::Bear),
+            "NEUTRAL" => Some(RegimeState::Neutral),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -91,6 +134,13 @@ pub struct CrossSectionResponse {
     pub sections: Vec<CrossSectionSection>,
     /// RFC 3339 UTC timestamp at the moment compute finished.
     pub computed_at: String,
+    /// Trading day (YYYY-MM-DD) this compute was filed under.
+    #[serde(default)]
+    pub snapshot_date: Option<String>,
+    /// Trading day of the snapshot each row's `prev` came from. None on the
+    /// first day of use.
+    #[serde(default)]
+    pub compared_to: Option<String>,
 }
 
 pub use compute::compute_cross_section;

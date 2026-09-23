@@ -112,6 +112,9 @@ pub fn run() {
         Ok(_) => {}
         Err(e) => log::warn!("news retention cleanup failed: {}", e),
     }
+    if let Err(e) = db.cleanup_old_pulse_snapshots(90) {
+        log::warn!("pulse snapshot retention cleanup failed: {e}");
+    }
 
     tauri::Builder::default()
         // Must be registered first. A second launch focuses the running

@@ -9,6 +9,14 @@ import type {
   RegimeState,
 } from '../../types/cross_section';
 import { TabIntro } from '../analysis/TabIntro';
+import {
+  BIG_MOVE_POINTS,
+  DELTA_SHOW_POINTS,
+  formatSnapDate,
+  rowChanged,
+  shownDelta,
+  tallyChanges,
+} from './pulseDelta';
 
 /// v1.2 Pulse — single-screen percentile cross-section heatmap. Calls
 /// `compute_cross_section` on mount. Heavy compute (every ticker × 3
@@ -17,7 +25,7 @@ import { TabIntro } from '../analysis/TabIntro';
 
 type SortColumn = 'level' | 'rsi' | 'atr' | 'vol' | 'dd' | 'age' | null;
 type SortDirection = 'asc' | 'desc';
-type FilterScope = 'all' | 'bull' | 'bear' | 'extremes';
+type FilterScope = 'all' | 'bull' | 'bear' | 'extremes' | 'changes';
 
 /// localStorage key for the ticker→TickerDashboard handoff. Written on
 /// ticker click; consumed (and cleared) by TickerDashboard on mount once
@@ -64,25 +72,53 @@ function ddCellBg(ddPct: number | null): string {
   return `rgba(var(--status-down-rgb), ${alpha.toFixed(3)})`;
 }
 
-function PulseRegimeChip({ regime }: { regime: RegimeState | null }) {
+function PulseRegimeChip({
+  regime,
+  prevRegime,
+  comparedTo,
+}: {
+  regime: RegimeState | null;
+  prevRegime?: RegimeState | null;
+  comparedTo: string | null;
+}) {
   if (regime == null) return <span className="pulse__em">—</span>;
+  const flipped = prevRegime != null && prevRegime !== regime;
   return (
-    <span className={`pulse__chip pulse__chip--${regime.toLowerCase()}`}>{regime}</span>
+    <span
+      className={`pulse__chip pulse__chip--${regime.toLowerCase()}`}
+      title={flipped && comparedTo ? `Was ${prevRegime} on ${formatSnapDate(comparedTo)}` : undefined}
+    >
+      {regime}
+      {flipped ? <span className="pulse__flip-mark">↻</span> : null}
+    </span>
   );
 }
 
 function PulseCell({
   value,
   partial,
+  prev,
 }: {
   value: number | null;
   partial?: boolean;
+  /** Previous trading day's value; a change ≥ DELTA_SHOW_POINTS is drawn. */
+  prev?: number | null;
 }) {
   if (value == null) return <div className="pulse__cell pulse__cell--empty">—</div>;
+  const d = shownDelta(value, prev);
   return (
     <div className="pulse__cell" style={{ background: pulseCellBg(value) }}>
       {Math.round(value)}
       {partial ? <span className="pulse__partial-mark">*</span> : null}
+      {d != null ? (
+        <span
+          className={`pulse__delta ${d > 0 ? 'pulse__delta--up' : 'pulse__delta--down'}`}
+          title={`${d > 0 ? '+' : ''}${Math.round(d)} pts vs previous trading day (was ${Math.round(prev ?? 0)})`}
+        >
+          {d > 0 ? '▲' : '▼'}
+          {Math.abs(Math.round(d))}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -214,6 +250,8 @@ export default function PulseDashboard({ onSelectSection }: Props) {
   const sections = useMemo(() => response?.sections ?? [], [response]);
   const counts = useMemo(() => tallyCounts(sections), [sections]);
   const extremes = useMemo(() => tallyExtremes(sections), [sections]);
+  const changes = useMemo(() => tallyChanges(sections), [sections]);
+  const comparedTo = response?.comparedTo ?? null;
   const noBarsCount = useMemo(
     () =>
       sections.reduce(
@@ -233,7 +271,7 @@ export default function PulseDashboard({ onSelectSection }: Props) {
           if (r.isMacro) return r.level != null && (r.level >= 80 || r.level <= 20);
           return rowHasExtremeCell(r);
         });
-      }
+      } else if (filter === 'changes') rows = rows.filter(rowChanged);
       if (sortCol) {
         rows = rows.slice().sort((a, b) => compareRows(a, b, sortCol, sortDir));
       }
@@ -290,9 +328,24 @@ export default function PulseDashboard({ onSelectSection }: Props) {
           <span><strong>{counts.macro}</strong> macro</span>
           <span className="pulse__sep">·</span>
           <span className="pulse__stat pulse__stat--ext"><strong>{extremes}</strong> EXTREMES</span>
+          {response && (
+            <>
+              <span className="pulse__sep">·</span>
+              {comparedTo ? (
+                <span title={`Compared with the Pulse snapshot from ${comparedTo}`}>
+                  vs {formatSnapDate(comparedTo)}: <strong>{changes.flips}</strong> flips ·{' '}
+                  <strong>{changes.bigMoves}</strong> big moves
+                </span>
+              ) : (
+                <span className="pulse__em" title="Changes appear from the next trading day on">
+                  first snapshot — changes from next trading day
+                </span>
+              )}
+            </>
+          )}
         </div>
         <div className="pulse__banner-filters">
-          {(['all', 'bull', 'bear', 'extremes'] as FilterScope[]).map(scope => (
+          {(['all', 'bull', 'bear', 'extremes', 'changes'] as FilterScope[]).map(scope => (
             <button
               key={scope}
               type="button"
@@ -346,6 +399,7 @@ export default function PulseDashboard({ onSelectSection }: Props) {
                 <li>Scan for cells at saturation. Greens at 90+ or reds at ≤10 are where stories develop.</li>
                 <li>Universe-wide patterns matter. If half the RSI column is red, that's a market-wide cool-off, not a ticker-specific signal.</li>
                 <li>Sortable by AGE, LEVEL, RSI, ATR, VOL, DD. Click a ticker to open its chart.</li>
+                <li>Changes since the previous trading day: a small ▲/▼ in a cell shows a move of {DELTA_SHOW_POINTS}+ percentile points; ↻ on a REGIME chip means it flipped. CHANGES keeps only rows that flipped or moved {BIG_MOVE_POINTS}+ points. Each day's latest Pulse view is kept locally for 90 days.</li>
               </ul>
             </>
           }
@@ -498,15 +552,19 @@ export default function PulseDashboard({ onSelectSection }: Props) {
                     ) : (
                       <>
                         <div className="pulse__regime-cell">
-                          <PulseRegimeChip regime={row.regime} />
+                          <PulseRegimeChip
+                            regime={row.regime}
+                            prevRegime={row.prev?.regime}
+                            comparedTo={comparedTo}
+                          />
                         </div>
                         <div className="pulse__age-cell">
                           {row.ageDays != null ? `${row.ageDays}d` : <span className="pulse__em">—</span>}
                         </div>
-                        <PulseCell value={row.level} partial={row.partialHistory} />
-                        <PulseCell value={row.rsi} partial={row.partialHistory} />
-                        <PulseCell value={row.atr} partial={row.partialHistory} />
-                        <PulseCell value={row.vol} partial={row.partialHistory} />
+                        <PulseCell value={row.level} partial={row.partialHistory} prev={row.prev?.level} />
+                        <PulseCell value={row.rsi} partial={row.partialHistory} prev={row.prev?.rsi} />
+                        <PulseCell value={row.atr} partial={row.partialHistory} prev={row.prev?.atr} />
+                        <PulseCell value={row.vol} partial={row.partialHistory} prev={row.prev?.vol} />
                         <PulseDDCell ddPct={row.ddPct} />
                       </>
                     )}
