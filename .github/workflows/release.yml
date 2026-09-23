@@ -4,35 +4,48 @@ on:
   push:
     tags: ['v*']
 
-permissions:
-  contents: write
-  id-token: write
-  attestations: write
+# Two jobs so third-party code never runs with write access: `build` (npm
+# install scripts, ~400 crates' build.rs / proc-macros) gets a read-only
+# token, and only `publish` — which runs no project code — can attest and
+# create the release. No caches in this workflow: a cache written by a
+# master CI run must not be restorable into an attested release build.
+permissions: {}
 
 jobs:
   build:
     runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      # Actions are pinned to commit SHAs (tags can be moved); Dependabot
+      # proposes updates — see .github/dependabot.yml.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          node-version: 20
-          cache: npm
+          persist-credentials: false
 
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          workspaces: src-tauri
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.95.0
+
+      - name: Version matches tag
+        run: pwsh scripts/check-version.ps1 -Tag "${{ github.ref_name }}"
 
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Rust tests
+        run: |
+          npm run build
+          cargo test --manifest-path src-tauri/Cargo.toml --locked
+
       # Installer only — the portable exe tauri also builds is deliberately
       # not distributed (single install path, single SmartScreen prompt).
       - name: Build (NSIS installer)
-        run: npm run tauri:build
+        run: npm run tauri:build -- -- --locked
 
       - name: Stage artifacts and generate checksums
         run: |
@@ -40,18 +53,41 @@ jobs:
           New-Item -ItemType Directory -Force artifacts | Out-Null
           $installer = Get-ChildItem "src-tauri/target/release/bundle/nsis/*-setup.exe" | Select-Object -First 1
           Copy-Item $installer.FullName "artifacts/private-terminal-$tag-x64-setup.exe"
-          Get-FileHash artifacts/*.exe -Algorithm SHA256 |
-            ForEach-Object { "{0}  {1}" -f $_.Hash.ToLower(), (Split-Path $_.Path -Leaf) } |
-            Set-Content artifacts/SHA256SUMS.txt -Encoding ascii
+          # LF line endings so `sha256sum -c` works (publish job, Linux users).
+          $lines = Get-FileHash artifacts/*.exe -Algorithm SHA256 |
+            ForEach-Object { "{0}  {1}" -f $_.Hash.ToLower(), (Split-Path $_.Path -Leaf) }
+          [IO.File]::WriteAllText("$PWD/artifacts/SHA256SUMS.txt", (($lines -join "`n") + "`n"))
           Get-Content artifacts/SHA256SUMS.txt
 
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-artifacts
+          path: artifacts/
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-artifacts
+          path: artifacts
+
+      - name: Verify checksums survived the hand-off
+        run: cd artifacts && sha256sum -c SHA256SUMS.txt
+
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-path: artifacts/*.exe
 
       - name: Create draft release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           draft: true
           generate_release_notes: true
