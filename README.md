@@ -125,7 +125,7 @@ gh attestation verify .\private-terminal-vX.Y.Z-x64-setup.exe --repo cerkon1/pri
 ## Build from source
 
 ```sh
-# Prerequisites: Node 20+, Rust stable, Tauri v2 system deps
+# Prerequisites: Node 20.19+ (22 recommended), Rust stable, Tauri v2 system deps
 # https://v2.tauri.app/start/prerequisites/
 
 git clone https://github.com/cerkon1/private-terminal
