@@ -7,7 +7,7 @@ use crate::cross_section::{
 };
 use crate::AppState;
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn compute_cross_section(
     request: CrossSectionRequest,
     state: State<'_, AppState>,

@@ -57,7 +57,7 @@ pub struct StorageStats {
     pub watchlist_hidden: i64,
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_storage_stats(state: State<'_, AppState>) -> Result<StorageStats, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let conn = db.connection();
@@ -114,7 +114,7 @@ pub struct MaintenanceResult {
 ///
 /// Reports total on-disk footprint (`db` + `db-wal` + `db-shm`) before
 /// and after.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn db_maintenance(state: State<'_, AppState>) -> Result<MaintenanceResult, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let conn = db.connection();
@@ -205,7 +205,7 @@ pub struct PurgeOrphansResult {
 /// - `news_items` (only `source='finnhub_ticker'`) — same ticker-only scope
 ///   as indicator_settings. General/category news isn't keyed on ticker so
 ///   it's left alone (the 30-day retention sweep covers it).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn purge_orphaned_data(state: State<'_, AppState>) -> Result<PurgeOrphansResult, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let conn = db.connection();
@@ -293,7 +293,7 @@ pub struct BackupResult {
 /// frame in the WAL is folded into the main file. After that the `.db`
 /// alone holds everything; we only copy the main file to the destination.
 /// The current database is unchanged — `AppState.db` keeps pointing at it.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn backup_database(
     destination: String,
     state: State<'_, AppState>,
@@ -374,7 +374,7 @@ pub struct MoveResult {
 ///
 /// If any step fails, we bail with an error and `AppState.db` keeps
 /// pointing at the original — no partial state.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn move_database(
     destination: String,
     state: State<'_, AppState>,

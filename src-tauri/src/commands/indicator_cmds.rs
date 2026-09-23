@@ -82,7 +82,7 @@ pub struct ComputeRequest {
     pub indicator_ids: Vec<String>,
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn compute_indicators(
     request: ComputeRequest,
     state: State<'_, AppState>,

@@ -68,7 +68,7 @@ pub fn list_analysis_tools(state: State<'_, AppState>) -> Result<Vec<AnalysisToo
     Ok(result)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn compute_correlations(
     request: CorrelationsRequest,
     state: State<'_, AppState>,
@@ -77,7 +77,7 @@ pub fn compute_correlations(
     correlations::compute_correlations(&db, request)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn compute_yield_curve(
     request: YieldCurveRequest,
     state: State<'_, AppState>,
@@ -86,7 +86,7 @@ pub fn compute_yield_curve(
     yield_curve::compute_yield_curve(&db, request)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_recession_segments(
     state: State<'_, AppState>,
 ) -> Result<Vec<RecessionSegment>, String> {
@@ -94,7 +94,7 @@ pub fn list_recession_segments(
     macro_overlays::list_recession_segments(&db)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_tickers_with_coverage(
     state: State<'_, AppState>,
 ) -> Result<Vec<TickerCoverage>, String> {
@@ -102,7 +102,7 @@ pub fn list_tickers_with_coverage(
     coverage::list_tickers_with_coverage(&db)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn compute_pair_ratio(
     request: PairsRequest,
     state: State<'_, AppState>,
@@ -111,7 +111,7 @@ pub fn compute_pair_ratio(
     pairs::compute_pair_ratio(&db, request)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn compute_rrg(
     request: RrgRequest,
     state: State<'_, AppState>,
@@ -120,7 +120,7 @@ pub fn compute_rrg(
     rrg::compute_rrg(&db, request)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn compute_recession_prob(
     request: RecessionProbRequest,
     state: State<'_, AppState>,
@@ -129,7 +129,7 @@ pub fn compute_recession_prob(
     recession_prob::compute_recession_prob(&db, request)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn compute_financial_conditions(
     request: FinancialConditionsRequest,
     state: State<'_, AppState>,
@@ -138,7 +138,7 @@ pub fn compute_financial_conditions(
     financial_conditions::compute_financial_conditions(&db, request)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn compute_regime_quadrant(
     request: RegimeQuadrantRequest,
     state: State<'_, AppState>,
