@@ -37,11 +37,16 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Tests
-        run: |
-          npm test
-          npm run build
-          cargo test --manifest-path src-tauri/Cargo.toml --locked
+      # One command per step: pwsh `run:` blocks only fail on the LAST
+      # command's exit code, so a failing test mid-block would be ignored.
+      - name: Frontend tests
+        run: npm test
+
+      - name: Frontend build (for the Rust tests' embedded assets)
+        run: npm run build
+
+      - name: Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked
 
       # Installer only — the portable exe tauri also builds is deliberately
       # not distributed (single install path, single SmartScreen prompt).
