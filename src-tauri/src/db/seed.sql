@@ -26,7 +26,14 @@ DELETE FROM indicators WHERE id = 'larsson';
 
 DELETE FROM news_items WHERE feed_id = 'bnn_bloomberg';
 DELETE FROM news_feeds WHERE id = 'bnn_bloomberg';
-UPDATE news_feeds SET enabled = 1 WHERE id = 'finnhub_general';
+
+-- finnhub_general was first seeded disabled, later made on-by-default (the
+-- fetch is gated on a key anyway). One-shot: an unconditional UPDATE here
+-- re-enabled the feed on every boot, overriding a user who turned it off.
+UPDATE news_feeds SET enabled = 1
+ WHERE id = 'finnhub_general'
+   AND NOT EXISTS (SELECT 1 FROM config WHERE key = 'migration.finnhub_general_enabled');
+INSERT OR IGNORE INTO config (key, value) VALUES ('migration.finnhub_general_enabled', '1');
 
 -- ──────────────────────────────────────────────────────────────────────
 -- Sector groups — sidebar tree
@@ -379,7 +386,7 @@ INSERT OR IGNORE INTO news_feeds (id, source_type, url, display_name, category, 
   ('cbc_business',     'rss',     'https://www.cbc.ca/webfeed/rss/rss-business',                            'CBC Business',        'canada',       30, 1),
   ('fed_press',        'rss',     'https://www.federalreserve.gov/feeds/press_all.xml',                     'Fed Press Releases',  'central_bank', 60, 1),
   ('boc_press',        'rss',     'https://www.bankofcanada.ca/content_type/press-releases/feed/',          'Bank of Canada',      'central_bank', 60, 1),
-  ('finnhub_general',  'finnhub', 'general',                                                                'Finnhub Market News', 'us',           15, 0);
+  ('finnhub_general',  'finnhub', 'general',                                                                'Finnhub Market News', 'us',           15, 1);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- FRED series (29 = 22 visible + 7 analysis-only)

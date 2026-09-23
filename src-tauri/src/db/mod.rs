@@ -994,3 +994,75 @@ impl Db {
             .map_err(|e| e.to_string())
     }
 }
+
+#[cfg(test)]
+mod seed_tests {
+    use super::Db;
+
+    fn fresh_db(name: &str) -> (Db, std::path::PathBuf) {
+        let dir = std::env::temp_dir().join(format!("pt-seed-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let db = Db::open(&dir.join("t.db")).unwrap();
+        db.initialize_schema().unwrap();
+        db.migrate().unwrap();
+        db.seed().unwrap();
+        (db, dir)
+    }
+
+    fn finnhub_enabled(db: &Db) -> i64 {
+        db.connection()
+            .query_row("SELECT enabled FROM news_feeds WHERE id = 'finnhub_general'", [], |r| r.get(0))
+            .unwrap()
+    }
+
+    #[test]
+    fn reboot_seed_respects_disabled_finnhub_feed() {
+        let (db, dir) = fresh_db("finnhub");
+        assert_eq!(finnhub_enabled(&db), 1, "on by default for fresh installs");
+        db.connection()
+            .execute("UPDATE news_feeds SET enabled = 0 WHERE id = 'finnhub_general'", [])
+            .unwrap();
+        db.seed().unwrap();
+        db.seed().unwrap();
+        assert_eq!(finnhub_enabled(&db), 0, "seed must not re-enable a user-disabled feed");
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn hidden_original_blocks_seed_from_resurrecting_a_moved_ticker() {
+        // Mirrors update_ticker's move: copy to target + hide the original.
+        let (db, dir) = fresh_db("move");
+        let conn = db.connection();
+        conn.execute(
+            "INSERT INTO watchlist_tickers (ticker, sector_group_id, data_source, display_name, \
+               display_currency, display_order, enabled, user_hidden) \
+             SELECT ticker, 'watchlist', data_source, display_name, display_currency, \
+               display_order, enabled, 0 \
+             FROM watchlist_tickers WHERE ticker = '^GSPC' AND sector_group_id = 'indices_americas'",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE watchlist_tickers SET user_hidden = 1 \
+             WHERE ticker = '^GSPC' AND sector_group_id = 'indices_americas'",
+            [],
+        )
+        .unwrap();
+        db.seed().unwrap();
+        let visible: Vec<String> = db
+            .list_tickers_in_sector("indices_americas")
+            .unwrap()
+            .into_iter()
+            .map(|r| r.ticker)
+            .collect();
+        assert!(!visible.contains(&"^GSPC".to_string()), "moved ticker came back: {visible:?}");
+        assert!(db
+            .list_tickers_in_sector("watchlist")
+            .unwrap()
+            .iter()
+            .any(|r| r.ticker == "^GSPC"));
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}

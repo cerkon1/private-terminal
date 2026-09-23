@@ -407,13 +407,11 @@ pub async fn update_ticker(
         .transpose()?;
 
     let db = state.db.lock().map_err(|e| e.to_string())?;
+    let tx = db.connection().unchecked_transaction().map_err(|e| e.to_string())?;
 
     if let Some(new_group) = new_sector_group_id.as_deref() {
-        // Validate target group exists + not hidden. Then update the row's
-        // sector_group_id. SQLite allows updating part of a composite PK —
-        // nothing references watchlist_tickers by FK, so this is safe.
-        let target_exists: bool = db
-            .connection()
+        // Validate target group exists + not hidden.
+        let target_exists: bool = tx
             .query_row(
                 "SELECT 1 FROM sector_groups WHERE id = ?1 AND user_hidden = 0",
                 params![new_group],
@@ -424,35 +422,54 @@ pub async fn update_ticker(
             return Err(format!("target sector group '{}' not found", new_group));
         }
         // If a hidden row already exists at (ticker, new_group), clear it first
-        // to avoid a PK collision on the update.
-        db.connection()
+        // to avoid a PK collision on the copy below.
+        tx.execute(
+            "DELETE FROM watchlist_tickers \
+             WHERE ticker = ?1 AND sector_group_id = ?2 AND user_hidden = 1",
+            params![ticker, new_group],
+        )
+        .map_err(|e| e.to_string())?;
+        // Move = copy to the target group + soft-hide the original. Re-keying
+        // the row in place (UPDATE sector_group_id) let seed.sql's
+        // INSERT OR IGNORE re-add a seeded ticker to its original group on
+        // the next boot; the hidden original row blocks that.
+        let copied = tx
             .execute(
-                "DELETE FROM watchlist_tickers \
-                 WHERE ticker = ?1 AND sector_group_id = ?2 AND user_hidden = 1",
-                params![ticker, new_group],
+                "INSERT INTO watchlist_tickers \
+                   (ticker, sector_group_id, data_source, display_name, display_currency, \
+                    display_order, enabled, user_hidden) \
+                 SELECT ticker, ?3, data_source, display_name, display_currency, \
+                        display_order, enabled, 0 \
+                 FROM watchlist_tickers \
+                 WHERE ticker = ?1 AND sector_group_id = ?2 AND user_hidden = 0",
+                params![ticker, sector_group_id, new_group],
             )
             .map_err(|e| e.to_string())?;
+        if copied == 0 {
+            return Err(format!("ticker {}/{} not found", ticker, sector_group_id));
+        }
+        tx.execute(
+            "UPDATE watchlist_tickers SET user_hidden = 1 \
+             WHERE ticker = ?1 AND sector_group_id = ?2",
+            params![ticker, sector_group_id],
+        )
+        .map_err(|e| e.to_string())?;
     }
 
     // Build UPDATE with COALESCE so omitted fields don't wipe current values.
-    // display_order is explicit because 0 is a valid value that COALESCE over
-    // would preserve — use Option<i64> directly via a branch.
     let target_group = new_sector_group_id.as_deref().unwrap_or(&sector_group_id);
-    let rows = db
-        .connection()
+    let rows = tx
         .execute(
             "UPDATE watchlist_tickers SET \
                display_name = COALESCE(?3, display_name), \
                display_currency = COALESCE(?4, display_currency), \
-               sector_group_id = ?5, \
-               display_order = COALESCE(?6, display_order) \
+               display_order = COALESCE(?5, display_order) \
              WHERE ticker = ?1 AND sector_group_id = ?2 AND user_hidden = 0",
             params![
                 ticker,
-                sector_group_id,
+                target_group,
                 display_name,
                 input.display_currency,
-                target_group,
                 input.display_order,
             ],
         )
@@ -460,7 +477,7 @@ pub async fn update_ticker(
     if rows == 0 {
         return Err(format!("ticker {}/{} not found", ticker, sector_group_id));
     }
-    Ok(())
+    tx.commit().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
