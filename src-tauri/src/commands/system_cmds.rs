@@ -304,13 +304,6 @@ pub fn backup_database(
     }
 
     let db_guard = state.db.lock().map_err(|e| e.to_string())?;
-    let source = db_guard.path().to_path_buf();
-
-    // Consolidate WAL into main first so the copied .db is self-contained.
-    db_guard
-        .connection()
-        .execute_batch("PRAGMA wal_checkpoint(TRUNCATE)")
-        .map_err(|e| format!("checkpoint failed: {}", e))?;
 
     let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
     let filename = format!("personal-terminal.backup-{}.db", stamp);
@@ -322,13 +315,37 @@ pub fn backup_database(
         ));
     }
 
-    let bytes = std::fs::copy(&source, &dest_path)
-        .map_err(|e| format!("copy failed: {}", e))?;
+    let bytes = snapshot_to(&db_guard, &dest_path)?;
 
     Ok(BackupResult {
         destination_path: dest_path.to_string_lossy().to_string(),
         bytes,
     })
+}
+
+/// Consistent snapshot of the live DB into `dest`, which must not exist.
+///
+/// `VACUUM INTO` reads inside a single transaction, so the copy includes
+/// every commit — including ones still in the WAL. The previous
+/// checkpoint-then-`fs::copy` approach ignored the checkpoint's busy flag:
+/// if another connection held a read snapshot the checkpoint was partial
+/// and the copied file silently lacked recent commits (and move_database
+/// then repointed to it). Output is also compacted.
+///
+/// Never touches a pre-existing file: an existing `dest` is an error, and
+/// only a partial file this call created is removed on failure.
+fn snapshot_to(db: &db::Db, dest: &Path) -> Result<u64, String> {
+    if dest.exists() {
+        return Err(format!("destination already exists: {}", dest.display()));
+    }
+    let dest_str = dest
+        .to_str()
+        .ok_or_else(|| format!("destination path is not valid UTF-8: {}", dest.display()))?;
+    if let Err(e) = db.connection().execute("VACUUM INTO ?1", [dest_str]) {
+        let _ = std::fs::remove_file(dest);
+        return Err(format!("snapshot failed: {e}"));
+    }
+    std::fs::metadata(dest).map(|m| m.len()).map_err(|e| e.to_string())
 }
 
 #[derive(Debug, Serialize)]
@@ -350,8 +367,7 @@ pub struct MoveResult {
 /// Steps (each must succeed before the next):
 /// 1. Validate destination — must be a directory, must not already contain
 ///    `personal-terminal.db`, must not be the current location.
-/// 2. Checkpoint+truncate the WAL so the source `.db` is self-contained.
-/// 3. Copy `.db` to destination.
+/// 2–3. Snapshot the live DB to the destination (`snapshot_to`, VACUUM INTO).
 /// 4. Open a fresh `Db` against the destination.
 /// 5. Replace `AppState.db` with the new connection (drops old).
 /// 6. Write the pointer file.
@@ -382,14 +398,7 @@ pub fn move_database(
         ));
     }
 
-    // Consolidate WAL → main so the copied .db is self-contained.
-    guard
-        .connection()
-        .execute_batch("PRAGMA wal_checkpoint(TRUNCATE)")
-        .map_err(|e| format!("checkpoint failed: {}", e))?;
-
-    let bytes = std::fs::copy(&source, &dest_path)
-        .map_err(|e| format!("copy failed: {}", e))?;
+    let bytes = snapshot_to(&guard, &dest_path)?;
 
     // Open the new DB. If this fails (corrupted copy, permissions), back
     // out by deleting the partial copy and reporting the error.
@@ -431,4 +440,47 @@ pub fn move_database(
 #[tauri::command]
 pub fn reset_database_location() -> Result<(), String> {
     config::write_db_pointer(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::snapshot_to;
+    use crate::db::Db;
+
+    /// The case the old checkpoint + fs::copy got wrong: a second connection
+    /// holds a read snapshot, so the checkpoint can't move recent commits
+    /// out of the WAL. The snapshot must still contain them.
+    #[test]
+    fn snapshot_includes_wal_commits_while_a_reader_is_open() {
+        let dir = std::env::temp_dir().join(format!("pt-snapshot-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let db = Db::open(&dir.join("live.db")).unwrap();
+        db.initialize_schema().unwrap();
+        db.set_config("session.before", "1").unwrap();
+
+        let reader = rusqlite::Connection::open(dir.join("live.db")).unwrap();
+        reader.execute_batch("BEGIN; SELECT count(*) FROM config;").unwrap();
+
+        db.set_config("session.after", "2").unwrap(); // lands in the WAL
+        // Reader pins the WAL: a checkpoint can only be partial.
+        db.connection().execute_batch("PRAGMA wal_checkpoint(PASSIVE)").unwrap();
+
+        let dest = dir.join("snap.db");
+        let bytes = snapshot_to(&db, &dest).unwrap();
+        assert!(bytes > 0);
+
+        let copy = Db::open(&dest).unwrap();
+        assert_eq!(copy.get_config("session.after").unwrap().as_deref(), Some("2"));
+        assert_eq!(copy.get_config("session.before").unwrap().as_deref(), Some("1"));
+
+        // Refuses to overwrite — and leaves the existing file alone.
+        assert!(snapshot_to(&db, &dest).is_err());
+        assert!(dest.exists(), "existing destination must not be deleted");
+
+        reader.execute_batch("COMMIT").unwrap();
+        drop((reader, copy, db));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

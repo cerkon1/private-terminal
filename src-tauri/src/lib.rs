@@ -113,6 +113,16 @@ pub fn run() {
     }
 
     tauri::Builder::default()
+        // Must be registered first. A second launch focuses the running
+        // window instead of opening a second connection to the same DB
+        // (two writers, and a reader that can stall WAL checkpoints).
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            use tauri::Manager;
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState { db: Mutex::new(db) })
