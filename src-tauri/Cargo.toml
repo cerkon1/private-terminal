@@ -31,7 +31,7 @@ rusqlite = { version = "0.30", features = ["bundled"] }
 # Async runtime + HTTP
 tokio = { version = "1.35", features = ["full"] }
 futures = "0.3"
-reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2"] }
 
 # Date/time
 chrono = { version = "0.4", features = ["serde"] }
@@ -48,7 +48,7 @@ dirs = "5.0"
 
 # RSS/Atom parsing (M7). feed-rs handles both feed formats uniformly and
 # preserves <guid>/<id> for dedup keys.
-feed-rs = "1.5"
+feed-rs = "2.4"
 # SHA-256 for synthetic guid fallback when a feed emits items without <guid>.
 sha2 = "0.10"
 
