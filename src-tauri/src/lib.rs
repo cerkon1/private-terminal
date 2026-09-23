@@ -134,6 +134,7 @@ pub fn run() {
             commands::macro_cmds::get_fred_tile,
             commands::macro_cmds::list_macro_tiles,
             commands::macro_cmds::get_fred_history,
+            commands::calendar_cmds::list_release_calendar,
             commands::sector_cmds::list_sector_groups,
             commands::sector_cmds::list_palette_tickers,
             commands::ticker_cmds::list_ticker_tiles,

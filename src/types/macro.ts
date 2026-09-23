@@ -12,6 +12,22 @@ export type MacroTileData = {
   fetchError: string | null;
 };
 
+/** v1.1 economic calendar — one upcoming FRED release date. */
+export type CalendarEntry = {
+  date: string; // YYYY-MM-DD (US)
+  releaseId: number;
+  releaseName: string;
+  seriesIds: string[];
+};
+
+export type CalendarResponse = {
+  entries: CalendarEntry[];
+  /** Today in New York — label "Today"/"Tomorrow" against this. */
+  today: string;
+  missingKey: boolean;
+  error: string | null;
+};
+
 export type FredObservation = { date: string; value: number };
 
 export type FredHistory = {

@@ -279,6 +279,21 @@ export default function FeaturesTab() {
       <div className="settings-subhead">Dashboard &amp; layout</div>
 
       <div className="about-card">
+        <div className="about-card__title">Economic calendar</div>
+        <p className="about-card__body">
+          <strong>What:</strong> Upcoming FRED release dates (CPI, Employment
+          Situation, GDP, jobless claims…) for the MACRO series, next 45 days.
+          Daily series are left out — they print every business day.
+        </p>
+        <p className="about-card__body">
+          <strong>Where:</strong> each MACRO tile shows its next release (◷,
+          amber when today or tomorrow); <span className="about-tips__key">CALENDAR</span>{' '}
+          on the MACRO toolbar lists them by day. Uses the same FRED key and
+          host as the tiles; refreshed at most once a day, or on REFRESH.
+        </p>
+      </div>
+
+      <div className="about-card">
         <div className="about-card__title">Pulse</div>
         <p className="about-card__body">
           <strong>What:</strong> Single-screen percentile-rank cross-section of
@@ -296,6 +311,13 @@ export default function FeaturesTab() {
           some rows are missing history. One-click batch-fetch of historical
           bars; failures (typically wrong exchange suffix) are listed inline
           below the banner.
+        </p>
+        <p className="about-card__body">
+          <strong>Since yesterday:</strong> ▲/▼ in a cell = a move of 10+
+          percentile points since the previous trading day; ↻ on a REGIME chip
+          = it flipped. The <span className="about-tips__key">CHANGES</span>{' '}
+          filter keeps flips and 20+ point moves. Each day's latest Pulse view
+          is kept locally for 90 days.
         </p>
       </div>
 

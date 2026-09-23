@@ -71,7 +71,7 @@ export default function PrivacyTab() {
           <tbody>
             <tr>
               <td className="mono">api.stlouisfed.org</td>
-              <td>Macroeconomic series observations from FRED</td>
+              <td>Macroeconomic series observations and scheduled release dates from FRED</td>
               <td>When MACRO opens, at most every 12 h; or on REFRESH</td>
             </tr>
             <tr>

@@ -200,3 +200,18 @@ CREATE TABLE IF NOT EXISTS ticker_notes (
   updated_at   TEXT NOT NULL,                  -- RFC 3339 UTC
   PRIMARY KEY (ticker, data_source)
 );
+
+-- v1.1 economic calendar. fred_series.release_id (added by migrate) points
+-- at the statistical release that publishes the series; dates include
+-- FRED's scheduled future dates. Refreshed at most once a day.
+CREATE TABLE IF NOT EXISTS fred_releases (
+  release_id  INTEGER PRIMARY KEY,
+  name        TEXT NOT NULL,
+  link        TEXT
+);
+
+CREATE TABLE IF NOT EXISTS fred_release_dates (
+  release_id    INTEGER NOT NULL,
+  release_date  TEXT NOT NULL,                 -- YYYY-MM-DD (US)
+  PRIMARY KEY (release_id, release_date)
+);

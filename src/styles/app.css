@@ -151,6 +151,92 @@ html, body, #root {
   letter-spacing: 0.1em;
 }
 
+/* v1.1 economic calendar — next-release badge on MACRO tiles. */
+.macro-tile__next {
+  float: right;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--text-tertiary);
+}
+.macro-tile__next--soon {
+  color: var(--accent-amber);
+  font-weight: 600;
+}
+
+.macro-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  overflow-y: auto;
+  min-height: 0;
+}
+.macro-calendar__day {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.macro-calendar__day--soon {
+  border-color: rgba(var(--accent-amber-rgb), 0.6);
+}
+.macro-calendar__date {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+}
+.macro-calendar__iso {
+  font-weight: 400;
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+}
+.macro-calendar__releases {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.macro-calendar__release {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.macro-calendar__name {
+  color: var(--text-primary);
+}
+.macro-calendar__series {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.macro-calendar__chip {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  padding: 1px 6px;
+  background: transparent;
+  color: var(--accent-cyan);
+  border: 1px solid rgba(var(--accent-cyan-rgb), 0.4);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.macro-calendar__chip:disabled {
+  color: var(--text-tertiary);
+  border-color: var(--border-subtle);
+  cursor: default;
+}
+.macro-calendar__warn,
+.macro-calendar__footnote {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+}
+.macro-calendar__warn {
+  color: var(--accent-amber);
+}
+
 .macro-tile__title {
   font-size: var(--fs-sm);
   color: var(--text-secondary);
@@ -874,10 +960,6 @@ html, body, #root {
 /* v1.1 — private per-ticker notes */
 .notes-toggle {
   position: relative;
-}
-.notes-toggle--open {
-  color: var(--accent-cyan);
-  border-color: rgba(var(--accent-cyan-rgb), 0.6);
 }
 .notes-toggle__dot {
   position: absolute;

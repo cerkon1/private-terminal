@@ -528,7 +528,7 @@ export default function TickerDashboard({
           </div>
           <button
             type="button"
-            className={`view-toggle notes-toggle ${notesOpen ? 'notes-toggle--open' : ''}`}
+            className={`view-toggle notes-toggle ${notesOpen ? 'view-toggle--active' : ''}`}
             onClick={() => setNotesOpen((v) => !v)}
             aria-pressed={notesOpen}
             title={notesOpen ? 'Hide your notes' : 'Show your private notes for this ticker'}

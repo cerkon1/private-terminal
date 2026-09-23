@@ -3,8 +3,10 @@ import { invoke } from '@tauri-apps/api/core';
 
 import CategoryTabs, { ALL_TAB } from './CategoryTabs';
 import FeatureChart from './charts/FeatureChart';
+import MacroCalendarView from './MacroCalendarView';
 import MacroTile from './MacroTile';
-import { FredHistory, MacroTileData } from '../types/macro';
+import { nextReleaseBySeries } from './macroCalendar';
+import { CalendarResponse, FredHistory, MacroTileData } from '../types/macro';
 
 type ViewMode = 'values' | 'heatmap';
 
@@ -36,6 +38,23 @@ export default function MacroDashboard({ onDataChanged, onSelectSection }: Props
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshSummary, setRefreshSummary] = useState<string | null>(null);
+  // Economic calendar (v1.1) — loaded after the tiles, never blocks them.
+  const [calendar, setCalendar] = useState<CalendarResponse | null>(null);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+
+  const loadCalendar = async (force: boolean) => {
+    setCalendarLoading(true);
+    try {
+      setCalendar(await invoke<CalendarResponse>('list_release_calendar', { force }));
+      setCalendarError(null);
+    } catch (err) {
+      setCalendarError(String(err));
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
 
   const fetchTiles = async (force: boolean): Promise<MacroTileData[] | null> => {
     try {
@@ -53,6 +72,7 @@ export default function MacroDashboard({ onDataChanged, onSelectSection }: Props
     fetchTiles(false).then(data => {
       if (cancelled || !data) return;
       setTiles(data);
+      void loadCalendar(false);
       // Ctrl+K command palette → MACRO chart handoff. Palette writes the
       // target series_id to localStorage before flipping section to MACRO;
       // here we read + clear it once tiles load and auto-`setSelected` so
@@ -83,6 +103,7 @@ export default function MacroDashboard({ onDataChanged, onSelectSection }: Props
     setIsRefreshing(false);
     if (!data) return;
     setTiles(data);
+    void loadCalendar(true);
     const errCount = data.filter(t => t.fetchError).length;
     const timestamp = new Date().toLocaleTimeString(undefined, { hour12: false });
     const summary =
@@ -100,6 +121,15 @@ export default function MacroDashboard({ onDataChanged, onSelectSection }: Props
     for (const t of tiles) if (t.category) set.add(t.category);
     return Array.from(set).sort();
   }, [tiles]);
+
+  const nextBySeries = useMemo(
+    () => nextReleaseBySeries(calendar?.entries ?? []),
+    [calendar],
+  );
+  const tilesById = useMemo(
+    () => new Map((tiles ?? []).map(t => [t.seriesId, t] as const)),
+    [tiles],
+  );
 
   const visibleTiles = useMemo(() => {
     if (!tiles) return [];
@@ -206,24 +236,46 @@ export default function MacroDashboard({ onDataChanged, onSelectSection }: Props
           </button>
           <button
             type="button"
+            className={`view-toggle ${showCalendar ? 'view-toggle--active' : ''}`}
+            onClick={() => setShowCalendar(v => !v)}
+            aria-pressed={showCalendar}
+            title="Upcoming FRED release dates for these series"
+          >
+            {showCalendar ? 'TILES' : 'CALENDAR'}
+          </button>
+          <button
+            type="button"
             className="view-toggle"
             onClick={() => setViewMode(m => (m === 'values' ? 'heatmap' : 'values'))}
+            disabled={showCalendar}
           >
             {viewMode === 'values' ? 'HEATMAP' : 'VALUES'}
           </button>
         </div>
       </div>
       {loadError && <div className="macro-tile__error">Failed to load: {loadError}</div>}
-      <section className="tile-grid">
-        {visibleTiles.map(t => (
-          <MacroTile
-            key={t.seriesId}
-            tile={t}
-            heatmap={viewMode === 'heatmap'}
-            onClick={handleTileClick}
-          />
-        ))}
-      </section>
+      {showCalendar ? (
+        <MacroCalendarView
+          calendar={calendar}
+          loading={calendarLoading}
+          loadError={calendarError}
+          tilesById={tilesById}
+          onOpenSeries={handleTileClick}
+        />
+      ) : (
+        <section className="tile-grid">
+          {visibleTiles.map(t => (
+            <MacroTile
+              key={t.seriesId}
+              tile={t}
+              heatmap={viewMode === 'heatmap'}
+              onClick={handleTileClick}
+              nextRelease={nextBySeries.get(t.seriesId)}
+              calendarToday={calendar?.today}
+            />
+          ))}
+        </section>
+      )}
     </div>
   );
 }

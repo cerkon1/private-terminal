@@ -1,12 +1,17 @@
 import { MacroTileData, computeYoY, formatYoY } from '../types/macro';
+import { daysUntil, releaseBadge, releaseDayLabel, type NextRelease } from './macroCalendar';
 
 type Props = {
   tile: MacroTileData;
   heatmap?: boolean;
   onClick?: (tile: MacroTileData) => void;
+  /** Next scheduled FRED release for this series (economic calendar). */
+  nextRelease?: NextRelease;
+  /** Today in New York, from the calendar response. */
+  calendarToday?: string;
 };
 
-export default function MacroTile({ tile, heatmap = false, onClick }: Props) {
+export default function MacroTile({ tile, heatmap = false, onClick, nextRelease, calendarToday }: Props) {
   const yoy = computeYoY(tile);
   const heatmapClass = heatmap ? heatmapBucket(yoy) : '';
 
@@ -21,6 +26,14 @@ export default function MacroTile({ tile, heatmap = false, onClick }: Props) {
         {tile.fetchError && (
           <span className="macro-tile__error-dot" title={tile.fetchError}>
             ⚠
+          </span>
+        )}
+        {nextRelease && calendarToday && (
+          <span
+            className={`macro-tile__next ${daysUntil(nextRelease.date, calendarToday) <= 1 ? 'macro-tile__next--soon' : ''}`}
+            title={`Next release: ${nextRelease.releaseName} — ${releaseDayLabel(nextRelease.date, calendarToday)}`}
+          >
+            ◷ {releaseBadge(nextRelease.date, calendarToday)}
           </span>
         )}
       </div>

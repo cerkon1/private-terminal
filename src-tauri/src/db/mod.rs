@@ -76,6 +76,11 @@ impl Db {
                 "last_fetch_error",
                 "ALTER TABLE quote_cache ADD COLUMN last_fetch_error TEXT",
             ),
+            (
+                "fred_series",
+                "release_id",
+                "ALTER TABLE fred_series ADD COLUMN release_id INTEGER",
+            ),
         ];
         for (table, col, sql) in migrations {
             match self.conn.execute(sql, []) {
@@ -983,6 +988,104 @@ impl Db {
         self.conn
             .execute("DELETE FROM pulse_snapshots WHERE snap_date < ?1", params![cutoff])
             .map_err(|e| e.to_string())
+    }
+
+    // ──────── Release calendar (v1.1) ────────
+
+    /// Series the calendar covers: visible MACRO tiles whose frequency isn't
+    /// daily (daily series belong to daily releases, which would flood the
+    /// calendar). Returns `(series_id, release_id)`.
+    pub fn calendar_series(&self) -> Result<Vec<(String, Option<i64>)>, String> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT series_id, release_id FROM fred_series
+                 WHERE tile_visible = 1
+                   AND (frequency IS NULL OR frequency NOT LIKE 'Daily%')
+                 ORDER BY series_id",
+            )
+            .map_err(|e| e.to_string())?;
+        let mut rows = stmt.query([]).map_err(|e| e.to_string())?;
+        let mut out = Vec::new();
+        while let Some(row) = rows.next().map_err(|e| e.to_string())? {
+            out.push((
+                row.get(0).map_err(|e| e.to_string())?,
+                row.get(1).map_err(|e| e.to_string())?,
+            ));
+        }
+        Ok(out)
+    }
+
+    pub fn set_series_release(
+        &self,
+        series_id: &str,
+        release_id: i64,
+        name: &str,
+        link: Option<&str>,
+    ) -> Result<(), String> {
+        self.conn
+            .execute(
+                "INSERT INTO fred_releases (release_id, name, link) VALUES (?1, ?2, ?3)
+                 ON CONFLICT(release_id) DO UPDATE SET name = excluded.name, link = excluded.link",
+                params![release_id, name, link],
+            )
+            .map_err(|e| e.to_string())?;
+        self.conn
+            .execute(
+                "UPDATE fred_series SET release_id = ?2 WHERE series_id = ?1",
+                params![series_id, release_id],
+            )
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    /// Replace a release's stored dates with a fresh fetch (one transaction).
+    pub fn replace_release_dates(&self, release_id: i64, dates: &[String]) -> Result<(), String> {
+        let tx = self.conn.unchecked_transaction().map_err(|e| e.to_string())?;
+        tx.execute("DELETE FROM fred_release_dates WHERE release_id = ?1", params![release_id])
+            .map_err(|e| e.to_string())?;
+        {
+            let mut stmt = tx
+                .prepare("INSERT OR IGNORE INTO fred_release_dates (release_id, release_date) VALUES (?1, ?2)")
+                .map_err(|e| e.to_string())?;
+            for d in dates {
+                stmt.execute(params![release_id, d]).map_err(|e| e.to_string())?;
+            }
+        }
+        tx.commit().map_err(|e| e.to_string())
+    }
+
+    /// `(date, release_id, release_name, series_id)` for calendar series with a
+    /// release date in `[from, to]` (inclusive, YYYY-MM-DD), date-ordered.
+    pub fn release_calendar_rows(
+        &self,
+        from: &str,
+        to: &str,
+    ) -> Result<Vec<(String, i64, String, String)>, String> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT d.release_date, r.release_id, r.name, s.series_id
+                 FROM fred_release_dates d
+                 JOIN fred_releases r ON r.release_id = d.release_id
+                 JOIN fred_series s ON s.release_id = d.release_id
+                 WHERE d.release_date BETWEEN ?1 AND ?2
+                   AND s.tile_visible = 1
+                   AND (s.frequency IS NULL OR s.frequency NOT LIKE 'Daily%')
+                 ORDER BY d.release_date, r.name, s.series_id",
+            )
+            .map_err(|e| e.to_string())?;
+        let mut rows = stmt.query(params![from, to]).map_err(|e| e.to_string())?;
+        let mut out = Vec::new();
+        while let Some(row) = rows.next().map_err(|e| e.to_string())? {
+            out.push((
+                row.get(0).map_err(|e| e.to_string())?,
+                row.get(1).map_err(|e| e.to_string())?,
+                row.get(2).map_err(|e| e.to_string())?,
+                row.get(3).map_err(|e| e.to_string())?,
+            ));
+        }
+        Ok(out)
     }
 
     // ──────── Ticker notes (v1.1) ────────

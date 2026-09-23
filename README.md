@@ -83,7 +83,7 @@ are to the public data sources you choose to enable:
 
 | Destination | Purpose |
 |---|---|
-| `api.stlouisfed.org` | FRED macroeconomic series |
+| `api.stlouisfed.org` | FRED macroeconomic series and their release calendar |
 | `query1.finance.yahoo.com` | Quotes and historical bars |
 | `finnhub.io` | US-equity news (only if you supply a Finnhub API key) |
 | News RSS feed publishers | Headlines from feeds you enable (BBC, CNBC, Fed, BoC, Financial Post, CBC, Al Jazeera) |
