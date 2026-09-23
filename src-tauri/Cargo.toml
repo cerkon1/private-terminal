@@ -49,6 +49,10 @@ dirs = "5.0"
 # RSS/Atom parsing (M7). feed-rs handles both feed formats uniformly and
 # preserves <guid>/<id> for dedup keys.
 feed-rs = "2.4"
+
+# Native message box for startup failures, before a Tauri window exists.
+# Already in the tree via tauri-plugin-dialog; features match its usage.
+rfd = { version = "0.16", default-features = false, features = ["common-controls-v6"] }
 # SHA-256 for synthetic guid fallback when a feed emits items without <guid>.
 sha2 = "0.10"
 

@@ -2707,6 +2707,7 @@ dependencies = [
  "futures",
  "log",
  "reqwest 0.12.28",
+ "rfd",
  "rusqlite",
  "serde",
  "serde_json",

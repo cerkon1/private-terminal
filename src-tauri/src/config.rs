@@ -23,28 +23,43 @@ pub fn db_pointer_path() -> PathBuf {
     data_dir().join("db_location.txt")
 }
 
-/// Compute the DB path used at boot. Reads the pointer file if present,
-/// validates that the target file exists, falls back to the default
-/// `<data_dir>/personal-terminal.db` otherwise. Pure — does not create
-/// anything.
-pub fn resolve_db_path() -> PathBuf {
+/// Where the database should be opened from at boot.
+#[derive(Debug)]
+pub enum DbLocation {
+    /// No pointer file (or an empty one) — the default location.
+    Default(PathBuf),
+    /// The user moved the DB and the pointer target exists.
+    Moved(PathBuf),
+    /// The pointer names a file that isn't there — typically a disconnected
+    /// USB / network drive. The caller must ask the user rather than silently
+    /// open the (stale) default copy `move_database` left behind: edits made
+    /// there would "vanish" once the drive comes back.
+    MovedMissing { target: PathBuf, default: PathBuf },
+}
+
+/// Resolve the boot DB location from the pointer file. Pure — does not
+/// create anything.
+pub fn resolve_db_location() -> DbLocation {
     let default_path = data_dir().join(DB_FILENAME);
-    let pointer = db_pointer_path();
-    let Ok(content) = std::fs::read_to_string(&pointer) else {
-        return default_path;
+    let Ok(content) = std::fs::read_to_string(db_pointer_path()) else {
+        return DbLocation::Default(default_path);
     };
     let target = PathBuf::from(content.trim());
     if target.as_os_str().is_empty() {
-        return default_path;
+        return DbLocation::Default(default_path);
     }
-    if !target.exists() {
-        log::warn!(
-            "db_location.txt points to {:?} which doesn't exist; falling back to default",
-            target
-        );
-        return default_path;
+    if target.exists() {
+        DbLocation::Moved(target)
+    } else {
+        DbLocation::MovedMissing {
+            target,
+            default: default_path,
+        }
     }
-    target
+}
+
+pub fn default_db_path() -> PathBuf {
+    data_dir().join(DB_FILENAME)
 }
 
 /// Persist (or clear) the pointer file. Pass `None` to delete it (revert

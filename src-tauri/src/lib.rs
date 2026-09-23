@@ -12,23 +12,97 @@ pub struct AppState {
     pub db: Mutex<db::Db>,
 }
 
+/// Release builds use the Windows GUI subsystem: a panic at startup prints
+/// nowhere and the app just never appears. Every boot failure goes through
+/// a native message box instead.
+fn fatal(message: &str) -> ! {
+    log::error!("startup failed: {message}");
+    rfd::MessageDialog::new()
+        .set_level(rfd::MessageLevel::Error)
+        .set_title("Private Terminal can't start")
+        .set_description(message)
+        .set_buttons(rfd::MessageButtons::Ok)
+        .show();
+    std::process::exit(1);
+}
+
+/// Yes/No prompt: Yes → open the default database for this session only
+/// (the pointer file is left alone, so the next launch tries the moved
+/// location again); No → quit.
+fn offer_default_db(problem: &str, default: &std::path::Path) -> std::path::PathBuf {
+    let description = format!(
+        "{problem}\n\n\
+         Yes — open the default database for this session only:\n{}\n\
+         Changes made there will NOT be in your moved database.\n\n\
+         No — quit. Reconnect the drive and start Private Terminal again.",
+        default.display()
+    );
+    let choice = rfd::MessageDialog::new()
+        .set_level(rfd::MessageLevel::Warning)
+        .set_title("Private Terminal — database not available")
+        .set_description(description)
+        .set_buttons(rfd::MessageButtons::YesNo)
+        .show();
+    if choice == rfd::MessageDialogResult::Yes {
+        log::warn!("using default database for this session: {:?}", default);
+        default.to_path_buf()
+    } else {
+        std::process::exit(0);
+    }
+}
+
+fn open_and_prepare(path: &std::path::Path) -> Result<db::Db, String> {
+    let db = db::Db::open(path)?;
+    db.initialize_schema()?;
+    db.migrate()?;
+    db.seed()?;
+    Ok(db)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Load .env from the workspace root if present (FRED_API_KEY etc.)
+    // .env is a developer convenience (FRED_API_KEY etc.). Release builds
+    // don't read it, so a stray .env in a parent directory can't inject keys.
+    #[cfg(debug_assertions)]
     let _ = dotenvy::dotenv();
     env_logger::init();
 
     // Always create the default data dir — even when the user has moved
     // the DB elsewhere, the pointer file lives in the default dir.
     let data_dir = config::data_dir();
-    std::fs::create_dir_all(&data_dir).expect("failed to create app data dir");
-    let db_path = config::resolve_db_path();
+    if let Err(e) = std::fs::create_dir_all(&data_dir) {
+        fatal(&format!(
+            "Couldn't create the app data folder\n{}\n\n{e}",
+            data_dir.display()
+        ));
+    }
+
+    let default_path = config::default_db_path();
+    let db_path = match config::resolve_db_location() {
+        config::DbLocation::Default(p) | config::DbLocation::Moved(p) => p,
+        config::DbLocation::MovedMissing { target, default } => offer_default_db(
+            &format!(
+                "Your database was moved to\n{}\nbut that file isn't there (disconnected drive?).",
+                target.display()
+            ),
+            &default,
+        ),
+    };
     log::info!("opening database at {:?}", db_path);
 
-    let db = db::Db::open(&db_path).expect("failed to open database");
-    db.initialize_schema().expect("failed to initialize schema");
-    db.migrate().expect("failed to run migrations");
-    db.seed().expect("failed to seed database");
+    let open_failed = |path: &std::path::Path, e: &str| {
+        format!("Couldn't open the database at\n{}\n\n{e}", path.display())
+    };
+    let db = match open_and_prepare(&db_path) {
+        Ok(db) => db,
+        // A moved DB that exists but won't open (corrupt, read-only share,
+        // no WAL support on the target filesystem): offer the default copy.
+        Err(e) if db_path != default_path => {
+            let fallback = offer_default_db(&open_failed(&db_path, &e), &default_path);
+            open_and_prepare(&fallback).unwrap_or_else(|e| fatal(&open_failed(&fallback, &e)))
+        }
+        Err(e) => fatal(&open_failed(&db_path, &e)),
+    };
 
     // Retention pass for the news table. Runs once per app boot; bounded
     // table stays small even after months of use.
@@ -95,5 +169,5 @@ pub fn run() {
             commands::cross_section_cmds::compute_cross_section,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running personal-terminal");
+        .unwrap_or_else(|e| fatal(&format!("{e}")));
 }
