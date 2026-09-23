@@ -52,6 +52,11 @@ export default function TickerTile({
             ⚠
           </span>
         )}
+        {tile.hasNote && (
+          <span className="ticker-tile__note-mark" title="You have a note on this ticker">
+            ✎
+          </span>
+        )}
       </div>
       <h2 className="macro-tile__title" title={tile.displayName ?? tile.ticker}>
         {tile.displayName ?? tile.ticker}

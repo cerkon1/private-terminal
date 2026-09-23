@@ -49,6 +49,8 @@ pub struct TickerTileData {
     pub change_pct_1y: Option<f64>,
     #[serde(default)]
     pub fetch_error: Option<String>,
+    /// A private note exists for (ticker, data_source) — tiles show ✎.
+    pub has_note: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -137,8 +139,10 @@ pub async fn list_ticker_tiles(
     // target Dec 31 and `close_at_or_before` walks back to the nearest bar.
     let d_ytd = format!("{}-12-31", today.year() - 1);
 
+    let noted = db.tickers_with_notes()?;
     let mut tiles = Vec::with_capacity(tickers.len());
     for t in tickers {
+        let has_note = noted.contains(&(t.ticker.clone(), t.data_source.clone()));
         let quote = db.get_quote(&t.ticker, &t.data_source)?;
         // In-memory errors from the current refresh win when present (most
         // recent state); fall back to the persistent column so a previous
@@ -182,6 +186,7 @@ pub async fn list_ticker_tiles(
             change_pct_ytd: chg_ytd,
             change_pct_1y: chg_1y,
             fetch_error,
+            has_note,
         });
     }
     Ok(tiles)

@@ -28,7 +28,7 @@ where
 
 // ──────────── validation ────────────
 
-fn validate_ticker(raw: &str) -> Result<String, String> {
+pub(crate) fn validate_ticker(raw: &str) -> Result<String, String> {
     let t = raw.trim().to_uppercase();
     if t.is_empty() {
         return Err("ticker cannot be empty".into());
@@ -156,6 +156,8 @@ pub struct PurgeResult {
     pub quote_deleted: bool,
     pub indicator_settings_deleted: usize,
     pub news_items_deleted: usize,
+    /// The ticker's private note was deleted (last visible occurrence only).
+    pub note_deleted: bool,
 }
 
 // ──────────── ticker commands ────────────
@@ -324,6 +326,7 @@ pub async fn purge_ticker(
         quote_deleted: false,
         indicator_settings_deleted: 0,
         news_items_deleted: 0,
+        note_deleted: false,
     };
 
     if visible_under_source > 0 {
@@ -372,6 +375,17 @@ pub async fn purge_ticker(
                 )
                 .map_err(|e| e.to_string())?;
             result.news_items_deleted = news;
+
+            // The user's private note goes with an explicit purge of the last
+            // visible occurrence (the confirm dialog says so). The orphan
+            // sweep in system_cmds deliberately never touches notes.
+            let note = conn
+                .execute(
+                    "DELETE FROM ticker_notes WHERE ticker = ?1 AND data_source = ?2",
+                    params![ticker, data_source],
+                )
+                .map_err(|e| e.to_string())?;
+            result.note_deleted = note > 0;
         }
 
         result.cascaded = true;

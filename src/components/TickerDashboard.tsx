@@ -6,6 +6,7 @@ import FeatureChart from './charts/FeatureChart';
 import IndicatorPanel from './IndicatorPanel';
 import OverlayChips from './OverlayChips';
 import RangeSwitch from './RangeSwitch';
+import TickerNotesPanel from './TickerNotesPanel';
 import TickerTile from './TickerTile';
 import TileContextMenu, { type TileMenuItem } from './TileContextMenu';
 import { usePersistedState } from '../hooks/usePersistedState';
@@ -66,6 +67,18 @@ export default function TickerDashboard({
     'session.feature_chart_show_avwap',
     false,
   );
+  // Notes panel open/closed is app-wide, like the overlay toggles.
+  const [notesOpen, setNotesOpen] = usePersistedState<boolean>(
+    'session.feature_chart_notes_open',
+    false,
+  );
+
+  /** Keep the ✎ tile mark and the NOTES dot in step with saves/deletes. */
+  const setHasNote = (ticker: string, dataSource: string, hasNote: boolean) => {
+    const match = (t: TickerTileData) => t.ticker === ticker && t.dataSource === dataSource;
+    setTiles((prev) => prev?.map((t) => (match(t) ? { ...t, hasNote } : t)) ?? prev);
+    setSelected((prev) => (prev && match(prev) ? { ...prev, hasNote } : prev));
+  };
 
   // Per-ticker AVWAP anchors. Single global dict keyed by `<ticker>:<dataSource>`
   // — `usePersistedState` is designed for stable keys, so we don't pass the
@@ -346,6 +359,7 @@ export default function TickerDashboard({
         quoteDeleted: boolean;
         indicatorSettingsDeleted: number;
         newsItemsDeleted: number;
+        noteDeleted: boolean;
       }>('purge_ticker', {
         ticker: purgeCandidate.ticker,
         sectorGroupId: purgeCandidate.sectorGroupId,
@@ -357,6 +371,7 @@ export default function TickerDashboard({
         if (r.quoteDeleted) parts.push('quote');
         if (r.indicatorSettingsDeleted > 0)
           parts.push(`${r.indicatorSettingsDeleted} indicator setting(s)`);
+        if (r.noteDeleted) parts.push('your note');
         flashStatus(`Purged ${sym} · ${parts.join(' · ')}`);
       } else {
         flashStatus(`Removed ${sym} from this group · cached data kept`);
@@ -511,24 +526,44 @@ export default function TickerDashboard({
               ]}
             />
           </div>
+          <button
+            type="button"
+            className={`view-toggle notes-toggle ${notesOpen ? 'notes-toggle--open' : ''}`}
+            onClick={() => setNotesOpen((v) => !v)}
+            aria-pressed={notesOpen}
+            title={notesOpen ? 'Hide your notes' : 'Show your private notes for this ticker'}
+          >
+            NOTES
+            {selected.hasNote && <span className="notes-toggle__dot" aria-label="has a note" />}
+          </button>
         </div>
-        <div className="feature-chart-pane__chart">
-          {historyError && <div className="macro-tile__error">{historyError}</div>}
-          {!history && !historyError && (
-            <div className="macro-tile__loading">Loading history…</div>
-          )}
-          {history && (
-            <FeatureChart
-              title={selected.displayName ?? selected.ticker}
-              units={history.displayCurrency ?? ''}
-              mode="candlestick"
-              bars={chartBars}
-              indicators={themedIndicators}
-              showVrvp={showVrvp}
-              showDrawdown={showDrawdown}
-              showAvwap={showAvwap}
-              avwapAnchors={avwapAnchors}
-              onAvwapAnchorClick={addAvwapAnchor}
+        <div className="feature-chart-pane__body">
+          <div className="feature-chart-pane__chart">
+            {historyError && <div className="macro-tile__error">{historyError}</div>}
+            {!history && !historyError && (
+              <div className="macro-tile__loading">Loading history…</div>
+            )}
+            {history && (
+              <FeatureChart
+                title={selected.displayName ?? selected.ticker}
+                units={history.displayCurrency ?? ''}
+                mode="candlestick"
+                bars={chartBars}
+                indicators={themedIndicators}
+                showVrvp={showVrvp}
+                showDrawdown={showDrawdown}
+                showAvwap={showAvwap}
+                avwapAnchors={avwapAnchors}
+                onAvwapAnchorClick={addAvwapAnchor}
+              />
+            )}
+          </div>
+          {notesOpen && (
+            <TickerNotesPanel
+              key={`${selected.ticker}:${selected.dataSource}`}
+              ticker={selected.ticker}
+              dataSource={selected.dataSource}
+              onHasNoteChange={(has) => setHasNote(selected.ticker, selected.dataSource, has)}
             />
           )}
         </div>
@@ -598,8 +633,8 @@ export default function TickerDashboard({
               <p>
                 This will hard-delete <code>{purgeCandidate.ticker}</code> from
                 the current group. If this is the last visible occurrence of
-                this ticker anywhere, cached bars + indicator settings will
-                cascade-drop too.
+                this ticker anywhere, cached bars, indicator settings and your
+                private note on it will cascade-drop too.
               </p>
               <p style={{ color: 'var(--text-tertiary)' }}>
                 Cannot be undone. The ticker can be re-added via Manage

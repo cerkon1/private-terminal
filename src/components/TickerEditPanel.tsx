@@ -16,6 +16,7 @@ type PurgeResult = {
   quoteDeleted: boolean;
   indicatorSettingsDeleted: number;
   newsItemsDeleted: number;
+  noteDeleted: boolean;
 };
 
 export default function TickerEditPanel({
@@ -104,6 +105,7 @@ export default function TickerEditPanel({
         if (r.indicatorSettingsDeleted > 0)
           parts.push(`${r.indicatorSettingsDeleted} indicator setting(s)`);
         if (r.newsItemsDeleted > 0) parts.push(`${r.newsItemsDeleted} news item(s)`);
+        if (r.noteDeleted) parts.push('your note');
         setStatus(`Purged ${sym} · ${parts.join(' · ')}`);
       } else {
         setStatus(`Removed ${sym} from this group · cached data kept (still in another group)`);
@@ -245,6 +247,7 @@ export default function TickerEditPanel({
                 <li>Latest quote cache</li>
                 <li>Indicator settings (when no group references the ticker)</li>
                 <li>Per-ticker Finnhub news (when no group references the ticker)</li>
+                <li>Your private note on the ticker (when no group references it)</li>
               </ul>
               <p className="modal__danger">
                 This cannot be undone. To hide the ticker without deleting its data, use

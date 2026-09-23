@@ -5,6 +5,7 @@ pub mod feed_cmds;
 pub mod indicator_cmds;
 pub mod macro_cmds;
 pub mod news_cmds;
+pub mod note_cmds;
 pub mod sector_cmds;
 pub mod session_cmds;
 pub mod settings_cmds;

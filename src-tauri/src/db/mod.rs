@@ -985,6 +985,72 @@ impl Db {
             .map_err(|e| e.to_string())
     }
 
+    // ──────── Ticker notes (v1.1) ────────
+
+    /// `(body, updated_at)` for a ticker's note, if any.
+    pub fn get_ticker_note(
+        &self,
+        ticker: &str,
+        data_source: &str,
+    ) -> Result<Option<(String, String)>, String> {
+        match self.conn.query_row(
+            "SELECT body, updated_at FROM ticker_notes WHERE ticker = ?1 AND data_source = ?2",
+            params![ticker, data_source],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        ) {
+            Ok(v) => Ok(Some(v)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+    /// Upsert a note; an empty `body` deletes it. Returns the stored
+    /// `updated_at` (None when deleted).
+    pub fn set_ticker_note(
+        &self,
+        ticker: &str,
+        data_source: &str,
+        body: &str,
+    ) -> Result<Option<String>, String> {
+        if body.is_empty() {
+            self.conn
+                .execute(
+                    "DELETE FROM ticker_notes WHERE ticker = ?1 AND data_source = ?2",
+                    params![ticker, data_source],
+                )
+                .map_err(|e| e.to_string())?;
+            return Ok(None);
+        }
+        let now = chrono::Utc::now().to_rfc3339();
+        self.conn
+            .execute(
+                "INSERT INTO ticker_notes (ticker, data_source, body, updated_at)
+                 VALUES (?1, ?2, ?3, ?4)
+                 ON CONFLICT(ticker, data_source) DO UPDATE SET
+                   body = excluded.body, updated_at = excluded.updated_at",
+                params![ticker, data_source, body, now],
+            )
+            .map_err(|e| e.to_string())?;
+        Ok(Some(now))
+    }
+
+    /// Every `(ticker, data_source)` that has a note — one query for tile flags.
+    pub fn tickers_with_notes(&self) -> Result<std::collections::HashSet<(String, String)>, String> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT ticker, data_source FROM ticker_notes")
+            .map_err(|e| e.to_string())?;
+        let mut rows = stmt.query([]).map_err(|e| e.to_string())?;
+        let mut out = std::collections::HashSet::new();
+        while let Some(row) = rows.next().map_err(|e| e.to_string())? {
+            out.insert((
+                row.get(0).map_err(|e| e.to_string())?,
+                row.get(1).map_err(|e| e.to_string())?,
+            ));
+        }
+        Ok(out)
+    }
+
     // ──────── Key-value config (session persistence) ────────
 
     pub fn get_config(&self, key: &str) -> Result<Option<String>, String> {

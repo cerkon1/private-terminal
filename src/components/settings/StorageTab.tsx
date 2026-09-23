@@ -281,7 +281,9 @@ export default function StorageTab() {
         <code>indicator_settings</code>, and per-ticker <code>news_items</code>{' '}
         rows for tickers no longer in any visible watchlist. Use this after
         renaming groups or hiding tickers without using the 🗑 Permanent Delete
-        action. Run maintenance after to reclaim the freed space.
+        action. Run maintenance after to reclaim the freed space. Your private
+        ticker notes are never swept — only an explicit Permanent Delete of the
+        ticker removes its note.
       </p>
       <div className="settings-actions">
         <button

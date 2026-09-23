@@ -866,6 +866,77 @@ html, body, #root {
   color: var(--status-down);
 }
 
+.ticker-tile__note-mark {
+  margin-left: var(--space-xs);
+  color: var(--accent-amber);
+}
+
+/* v1.1 — private per-ticker notes */
+.notes-toggle {
+  position: relative;
+}
+.notes-toggle--open {
+  color: var(--accent-cyan);
+  border-color: rgba(var(--accent-cyan-rgb), 0.6);
+}
+.notes-toggle__dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-amber);
+}
+
+.notes-panel {
+  flex: 0 0 300px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-height: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+}
+.notes-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+.notes-panel__title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+.notes-panel__text {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.notes-panel__text:focus {
+  outline: none;
+  border-color: rgba(var(--accent-cyan-rgb), 0.6);
+}
+.notes-panel__status {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.notes-panel__status--error {
+  color: var(--status-down);
+}
+
 .yoy-up { color: var(--status-up); }
 .yoy-down { color: var(--status-down); }
 
@@ -932,8 +1003,17 @@ html, body, #root {
   text-overflow: ellipsis;
 }
 
+/* v1.1 — chart + optional notes panel side by side. */
+.feature-chart-pane__body {
+  flex: 1;
+  display: flex;
+  gap: var(--space-md);
+  min-height: 0;
+}
+
 .feature-chart-pane__chart {
   flex: 1;
+  min-width: 0;
   min-height: 400px;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);

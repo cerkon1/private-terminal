@@ -103,6 +103,23 @@ export default function FeaturesTab() {
         </p>
       </div>
 
+      <div className="about-card">
+        <div className="about-card__title">Ticker notes</div>
+        <p className="about-card__body">
+          <strong>What:</strong> A private free-text note per ticker — your
+          thesis, levels to watch, a dated journal. Saves automatically as you
+          type; <span className="about-tips__key">+ DATE</span> starts a dated
+          entry.
+        </p>
+        <p className="about-card__body">
+          <strong>Where:</strong> <span className="about-tips__key">NOTES</span>{' '}
+          button in the feature-chart header opens the panel beside the chart.
+          Tiles with a note show ✎. Notes live only in the local database; a
+          Permanent Delete of the ticker removes its note, the orphan sweep
+          never does.
+        </p>
+      </div>
+
       <div className="settings-subhead">Indicators</div>
 
       <div className="about-card">

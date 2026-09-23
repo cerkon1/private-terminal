@@ -189,3 +189,14 @@ CREATE TABLE IF NOT EXISTS pulse_snapshots (
   regime       TEXT,                           -- 'BULL' | 'BEAR' | 'NEUTRAL' | NULL
   PRIMARY KEY (snap_date, ticker, data_source)
 );
+
+-- v1.1 private per-ticker notes (thesis / journal). Plain text, local only.
+-- Deleted only by an explicit purge of the ticker (never by the orphan
+-- sweep) — user-written text must not disappear silently.
+CREATE TABLE IF NOT EXISTS ticker_notes (
+  ticker       TEXT NOT NULL,
+  data_source  TEXT NOT NULL,
+  body         TEXT NOT NULL,
+  updated_at   TEXT NOT NULL,                  -- RFC 3339 UTC
+  PRIMARY KEY (ticker, data_source)
+);

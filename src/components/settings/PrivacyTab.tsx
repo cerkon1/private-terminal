@@ -44,8 +44,9 @@ export default function PrivacyTab() {
           </li>
           <li>
             <strong>No cloud sync.</strong> Your watchlist, indicator
-            settings, AVWAP anchors, Pulse's daily snapshots, view
-            preferences — all live in a single SQLite file on this machine.
+            settings, AVWAP anchors, Pulse's daily snapshots, your ticker
+            notes, view preferences — all live in a single SQLite file on
+            this machine.
           </li>
         </ul>
       </div>
@@ -106,6 +107,11 @@ export default function PrivacyTab() {
           path — click it to copy.
         </p>
         <p className="about-card__body">
+          Ticker notes are plain text in the same file — included in
+          backups, readable by anyone with access to your user account's
+          files, and never sent anywhere.
+        </p>
+        <p className="about-card__body">
           To wipe everything, close the app and delete the file. (Settings →
           Storage has a backup-copy action if you want a copy first.) There
           is no remote copy. When you delete the file, the data is gone.
@@ -113,8 +119,10 @@ export default function PrivacyTab() {
         <p className="about-card__body">
           API keys you enter for FRED or Finnhub are stored in the same
           SQLite file, not encrypted at rest. They never leave the machine
-          except as part of the request to that API. If you remove a key
-          via Settings → API Keys, it is removed from the file.
+          except as part of the request to that API. Removing a key via
+          Settings → API Keys clears it; the old bytes can linger in the
+          file's free space until you run Storage → maintenance, which
+          compacts the file.
         </p>
       </div>
 

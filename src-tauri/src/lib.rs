@@ -165,6 +165,8 @@ pub fn run() {
             commands::edit_cmds::update_sector_group,
             commands::edit_cmds::delete_sector_group,
             commands::edit_cmds::reorder_sector_groups,
+            commands::note_cmds::get_ticker_note,
+            commands::note_cmds::set_ticker_note,
             commands::session_cmds::get_session_key,
             commands::session_cmds::set_session_key,
             commands::settings_cmds::get_api_key_status,

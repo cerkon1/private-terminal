@@ -26,6 +26,8 @@ export type TickerTileData = {
   changePctYtd: number | null;
   changePct1y: number | null;
   fetchError: string | null;
+  /** A private note exists for this (ticker, dataSource) — tile shows ✎. */
+  hasNote: boolean;
 };
 
 export type TileRange = '1D' | '1W' | '1M' | 'YTD' | '1Y';
