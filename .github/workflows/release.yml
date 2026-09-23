@@ -29,7 +29,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build (NSIS installer + portable exe)
+      # Installer only — the portable exe tauri also builds is deliberately
+      # not distributed (single install path, single SmartScreen prompt).
+      - name: Build (NSIS installer)
         run: npm run tauri:build
 
       - name: Stage artifacts and generate checksums
@@ -38,7 +40,6 @@ jobs:
           New-Item -ItemType Directory -Force artifacts | Out-Null
           $installer = Get-ChildItem "src-tauri/target/release/bundle/nsis/*-setup.exe" | Select-Object -First 1
           Copy-Item $installer.FullName "artifacts/private-terminal-$tag-x64-setup.exe"
-          Copy-Item "src-tauri/target/release/personal-terminal.exe" "artifacts/private-terminal-$tag-portable-x64.exe"
           Get-FileHash artifacts/*.exe -Algorithm SHA256 |
             ForEach-Object { "{0}  {1}" -f $_.Hash.ToLower(), (Split-Path $_.Path -Leaf) } |
             Set-Content artifacts/SHA256SUMS.txt -Encoding ascii

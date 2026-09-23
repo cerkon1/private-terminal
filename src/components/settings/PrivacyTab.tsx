@@ -71,12 +71,12 @@ export default function PrivacyTab() {
             <tr>
               <td className="mono">api.stlouisfed.org</td>
               <td>Macroeconomic series observations from FRED</td>
-              <td>Daily, when MACRO opens</td>
+              <td>When MACRO opens, at most every 12 h; or on REFRESH</td>
             </tr>
             <tr>
-              <td className="mono">query2.finance.yahoo.com</td>
+              <td className="mono">query1.finance.yahoo.com</td>
               <td>Live quotes + historical price bars for tickers in your watchlist</td>
-              <td>Every 5 min during market hours, hourly otherwise; on-demand for history</td>
+              <td>When a section opens, at most every 15 min; or on REFRESH. History when a chart opens</td>
             </tr>
             <tr>
               <td className="mono">finnhub.io</td>

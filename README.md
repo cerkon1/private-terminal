@@ -83,7 +83,7 @@ are to the public data sources you choose to enable:
 | Destination | Purpose |
 |---|---|
 | `api.stlouisfed.org` | FRED macroeconomic series |
-| `query2.finance.yahoo.com` | Quotes and historical bars |
+| `query1.finance.yahoo.com` | Quotes and historical bars |
 | `finnhub.io` | US-equity news (only if you supply a Finnhub API key) |
 | News RSS feed publishers | Headlines from feeds you enable (BBC, CNBC, Fed, BoC, Financial Post, CBC, Al Jazeera) |
 
@@ -155,13 +155,8 @@ src-tauri/        Rust backend — data fetchers, SQLite, indicator math, IPC
 src/              React + TypeScript frontend
   components/     Tickers / Pulse / Macro / News / Analysis / Settings / Charts
   styles/         Design tokens + theming
-.projects/        Development log — design notes, session-by-session decisions, lessons
 CLAUDE.md         Project rules (architecture constraints + reuse checklists)
 ```
-
-The `.projects/` folder contains the full development log if you're
-curious about how the app was built — design decisions, milestone notes,
-and lessons learned across each session.
 
 ---
 
