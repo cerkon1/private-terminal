@@ -114,8 +114,15 @@ open-source software, and every release can be verified against this
 repository instead (see below). SmartScreen will warn on first launch —
 click *More info* → *Run anyway*.
 
-Mac and Linux builds are not currently provided. Tauri supports them; the
-codebase is portable; we just haven't packaged for them. PRs welcome.
+**NixOS / Nix.** The repository is a flake for x86_64 and aarch64 Linux. It
+builds from source:
+
+```sh
+nix run github:cerkon1/private-terminal
+```
+
+Other Linux packages and Mac builds are not currently provided. Tauri supports
+them; the codebase is portable; we just haven't packaged for them. PRs welcome.
 
 ### First run
 
@@ -164,6 +171,8 @@ npm run lint && npm test && npm run build
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
+
+With Nix, `nix develop` provides these prerequisites on Linux.
 
 API keys are optional for launching and are stored locally in your SQLite
 DB (see [First run](#first-run)).
